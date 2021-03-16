@@ -90,16 +90,18 @@ def delete(master, fname):
 
 
 def put(master, source, dest): # will overwrite existing file with same name/dest
-    size = os.path.getsize(source)  # returns the size of file in integer
+    size = os.path.getsize(source)  # gets the size of the file we are trying to put
     print(size)
-    blocks = master.write(dest, size) # gets the blocks of from  TODO: this adds file name to file table, if machine fails to upload, file name still exists but does not reference to any blocks i.e. will still be seen in list
+    # obtain address and id of available chunkservers that client can write to
+    blocks = master.write(dest, size) # gets the blocks of from master 
+    # TODO: this adds file name to file table, if machine fails to upload, file name still exists but does not reference to any blocks i.e. will still be seen in list
     with open(source) as f:
-        #each block is like a level
+        # loop through each of the blocks given by master and write to it
         for b in blocks:
             data = f.read(master.get_block_size())
-            block_uuid=b[0] #b[0] is the unique ID of each block
-            minions = [master.get_minions()[_] for _ in b[1]] # getting chunkserver details for the block
-            send_to_minion(block_uuid,data,minions)
+            block_uuid=b[0] # b[0] is the unique ID of each block
+            minions = [master.get_minions()[_] for _ in b[1]] # gets chunkserver details for the chunk
+            send_to_minion(block_uuid,data,minions) # tells chunkserver we want to write the data to specific block
             if debug_Mode:
                 print(data)
                 print("put master.get_minions:", master.get_minions())
@@ -109,10 +111,10 @@ def put(master, source, dest): # will overwrite existing file with same name/des
     print("File is hosted across chunk servers successfully!")
 
 def create(master, string_data, dest):
-    size = len(string_data.encode('utf-8'))
+    size = len(string_data.encode('utf-8')) 
     # size = os.path.getsize(source)  # returns the size of file in integer
     print(size)
-    blocks = master.write(dest, size) # gets the blocks of from master
+    blocks = master.write(dest, size) # gets the blocks details from master
     total_data = string_data
     #each block is like a level
     for b in blocks:
