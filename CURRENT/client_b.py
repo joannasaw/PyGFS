@@ -2,7 +2,7 @@ import rpyc
 import sys
 import os
 
-debug_Mode = True
+debug_Mode = False
 
 
 def send_to_minion(block_uuid,data,minions):
@@ -21,6 +21,7 @@ def send_to_minion(block_uuid,data,minions):
         minion.put(block_uuid, data, minions)
     except:
         print("\n----Chunk Server not found -------")
+        print("client: send_to_minion")
         print("----Start Chunks.py then try again ------ \n \n ")
         sys.exit(1)
 
@@ -33,6 +34,7 @@ def read_from_minion(block_uuid,minion):
         minion = con.root.Chunks()
     except:
         print("\n----Chunk Server not found -------")
+        print("client: read_from_minion")
         print("----Start Chunks.py then try again ------ \n \n ")
         sys.exit(1)
 
@@ -46,6 +48,7 @@ def delete_from_chunks(block_uuid, minion):
         minion = con.root.Chunks()
     except:
         print("\n----Chunk Server not found -------")
+        print("client: delete_from_chunks")
         print("----Start Chunks.py then try again ------ \n \n ")
         sys.exit(1)
 
@@ -53,7 +56,6 @@ def delete_from_chunks(block_uuid, minion):
 
 
 def get(master, fname):
-    # print("fname in get of client:", fname)
     file_table = master.get_file_table_entry(fname)
     if not file_table:
         print("File is not in the list. \n  Check list of files first")
@@ -87,22 +89,45 @@ def delete(master, fname):
     print("File deleted from chunk servers")
 
 
-def put(master, source, dest):
+def put(master, source, dest): # will overwrite existing file with same name/dest
     size = os.path.getsize(source)  # returns the size of file in integer
-    blocks = master.write(dest, size) # gets the blocks of from master
+    print(size)
+    blocks = master.write(dest, size) # gets the blocks of from  TODO: this adds file name to file table, if machine fails to upload, file name still exists but does not reference to any blocks i.e. will still be seen in list
     with open(source) as f:
         #each block is like a level
         for b in blocks:
             data = f.read(master.get_block_size())
-            if debug_Mode: print(data)  # debugging statement
             block_uuid=b[0] #b[0] is the unique ID of each block
-            print("put master.get_minions:", master.get_minions())
             minions = [master.get_minions()[_] for _ in b[1]] # getting chunkserver details for the block
+            send_to_minion(block_uuid,data,minions)
+            if debug_Mode:
+                print(data)
+                print("put master.get_minions:", master.get_minions())
+                print("put b:", b)
+                print("put b[1]:", b[1])
+                print("put minions:", minions)
+    print("File is hosted across chunk servers successfully!")
+
+def create(master, string_data, dest):
+    size = len(string_data.encode('utf-8'))
+    # size = os.path.getsize(source)  # returns the size of file in integer
+    print(size)
+    blocks = master.write(dest, size) # gets the blocks of from master
+    total_data = string_data
+    #each block is like a level
+    for b in blocks:
+        data = total_data[:master.get_block_size()] # select first n elements to be stored
+        total_data = total_data[master.get_block_size():] # remove first n elements
+        block_uuid=b[0] #b[0] is the unique ID of each block
+        minions = [master.get_minions()[_] for _ in b[1]] # getting chunkserver details for the block
+        send_to_minion(block_uuid,data,minions)
+        if debug_Mode:
+            print(data)
+            print("put master.get_minions:", master.get_minions())
             print("put b:", b)
             print("put b[1]:", b[1])
             print("put minions:", minions)
-            send_to_minion(block_uuid,data,minions)
-    print("File is hosted across chunk servers successfully")
+    print("File is hosted across chunk servers successfully!")
 
 
 def list_files(master):
@@ -119,36 +144,45 @@ def main(args):
         print("launch Master Server and try again")
         return
 
-    # while True:
-    #     try:
-    #         request = input("TYPE 'write', 'read', 'append' or 'delete': (w/r/a/d) ")
+    while True:
+        try:
+            request = input("\nTYPE 'list', 'upload', 'write', 'read', 'append' or 'delete': (l/w/r/a/d) ")
 
-    #         if request == "write" or request == "w":
-    #             file_name = input("FILE NAME: ")
-    #             # content = input("WRITE: ")
-    #             # client.write(file_name, content)
-    #             put(file_name, content)
+            if request == "list" or request == "l":
+                list_files(master)
 
-    #         elif request == "read" or request == "r":
-    #             file_name = input("FILE NAME: ")
-    #             # client.read(file_name)
-    #             get(file_name)
+            elif request == "upload" or request == "u":
+                original_file_name = input("SOURCE FILE NAME: ")
+                dest = input("DFS FILE NAME: ")
+                # client.write(file_name, content)
+                put(master, original_file_name, dest) #TODO: currently uploads an existing file, what about creating a new file?
 
-    #         elif request == "append" or request == "a":
-    #             file_name = input("FILE NAME: ")
-    #             content = input("APPEND: ")
-    #             # client.write_append(file_name, content)
-    #             print("NOT DONE YET LOL")
+            elif request == "write" or request == "w":
+                dest = input("DFS FILE NAME: ")
+                data = input("CONTENT:")
+                # client.write(file_name, content)
+                create(master, data, dest)
 
-    #         elif request == "delete" or request == "d":
-    #             file_name = input("FILE NAME: ")
-    #             # client.delete(file_name)
-    #             delete(file_name)
-    #         else:
-    #             print("Invalid action entered! Try again.")
-    #             break
-    #     except Exception as e:
-    #         print(e)
+            elif request == "read" or request == "r":
+                file_name = input("DFS FILE NAME: ")
+                # client.read(file_name)
+                get(master, file_name)
+
+            elif request == "append" or request == "a":
+                file_name = input("FILE NAME: ")
+                content = input("APPEND: ")
+                # client.write_append(file_name, content)
+                print("NOT DONE YET LOL") #TODO: append
+
+            elif request == "delete" or request == "d":
+                file_name = input("DFS FILE NAME: ")
+                # client.delete(file_name)
+                delete(master, file_name)
+            else:
+                print("Invalid action entered! Try again.")
+
+        except Exception as e:
+            print(e)
 
     # if len(args) == 0:
     #     print "------ Help on Usage -------"

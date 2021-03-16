@@ -33,7 +33,7 @@ def set_conf():
     conf.read_file(open('GFS.conf'))
     MasterService.exposed_Master.block_size = int(conf.get('master', 'block_size'))
     minions = conf.get('master', 'chunkServers').split(',')
-    print(minions)
+    # print(minions)
     for m in minions:
         id, host, port = m.split(":")
         # print("set_conf in master:", str(id))
@@ -81,7 +81,7 @@ class MasterService(rpyc.Service):
             return mapping_to_be_deleted
 
         def exposed_get_file_table_entry(self, fname):
-            print("file_table in master:", self.__class__.file_table)
+            # print("file_table in master:", self.__class__.file_table)
             if fname in self.__class__.file_table:
                 return self.__class__.file_table[fname]
             else:
@@ -120,10 +120,13 @@ class MasterService(rpyc.Service):
 
 
 if __name__ == "__main__":
+    port = 2131
     set_conf()
     # signal.signal(): Allows defining custom handlers to be executed when a signal is received
     # signal.SIGINT: allows keyboard interrupt
     signal.signal(signal.SIGINT, int_handler)
-    print("Master Server running")
-    t = ThreadedServer(MasterService, port=2131)
+    print("Master server running on port", port)
+    t = ThreadedServer(MasterService, port=port)
     t.start()
+
+    
