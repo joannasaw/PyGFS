@@ -18,7 +18,7 @@ class MinionService(rpyc.Service):
         blocks = {}
 
         def exposed_put(self, block_uuid, data, minions):
-            with open(os.path.sep.join([DATA_DIR, str(block_uuid)])), 'w') as f:
+            with open(os.path.sep.join([DATA_DIR, str(block_uuid)]), 'w') as f:
                 f.write(data)
                 print("WRITING:", data)
             if len(minions) > 0:

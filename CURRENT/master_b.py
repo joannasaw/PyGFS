@@ -28,25 +28,25 @@ def int_handler(signal, frame):
 
 def set_conf():
     conf = configparser.ConfigParser()
-    conf.readfp(open('GFS.conf'))
+    conf.read_file(open('GFS.conf'))
     MasterService.exposed_Master.block_size = int(conf.get('master', 'block_size'))
     minions = conf.get('master', 'chunkServers').split(',')
-    print(minions)
+    # print(minions)
     for m in minions:
         id, host, port = m.split(":")
         # print("set_conf in master:", str(id))
         MasterService.exposed_Master.minions[id] = (host, port)
 
-    try:
-        con = rpyc.connect("127.0.0.1", port=8100)
-        print(" ----- Connected to Primary back-up Server ------")
-        back_up_server = con.root.BackUpServer()
-        file_table_backup = back_up_server.getFileTable()
-        MasterService.exposed_Master.file_table = json.loads(file_table_backup)
-        con.close()
-    except:
-        print("\n -----Info: Primary backup Server not found !!! ------- ")
-        print(" -----Start the primary_backup_server ------- \n \n ")
+    # try:
+    #     con = rpyc.connect("127.0.0.1", port=8100)
+    #     print(" ----- Connected to Primary back-up Server ------")
+    #     back_up_server = con.root.BackUpServer()
+    #     file_table_backup = back_up_server.getFileTable()
+    #     MasterService.exposed_Master.file_table = json.loads(file_table_backup)
+    #     con.close()
+    # except:
+    #     print("\n -----Info: Primary backup Server not found !!! ------- ")
+    #     print(" -----Start the primary_backup_server ------- \n \n ")
 
 
 class MasterService(rpyc.Service):
@@ -77,7 +77,7 @@ class MasterService(rpyc.Service):
             return mapping_to_be_deleted
 
         def exposed_get_file_table_entry(self, fname):
-            print("file_table in master:", self.__class__.file_table)
+            # print("file_table in master:", self.__class__.file_table)
             if fname in self.__class__.file_table:
                 return self.__class__.file_table[fname]
             else:
@@ -115,8 +115,11 @@ class MasterService(rpyc.Service):
 
 
 if __name__ == "__main__":
+    port = 2131
     set_conf()
     signal.signal(signal.SIGINT, int_handler)
-    print("Master Server running")
-    t = ThreadedServer(MasterService, port=2131)
+    print("Master server running on port", port)
+    t = ThreadedServer(MasterService, port=port)
     t.start()
+
+    
