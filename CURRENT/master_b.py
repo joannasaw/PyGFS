@@ -9,10 +9,11 @@ import json
 
 from rpyc.utils.server import ThreadedServer
 
+# This function basically stores the state of the master and its mapping to a local file when interrupted
+
 
 def int_handler(signal, frame):
     content = MasterService.exposed_Master.file_table
-
     try:
         con = rpyc.connect("127.0.0.1", port=8100)
         back_up_server = con.root.BackUpServer()
@@ -27,16 +28,18 @@ def int_handler(signal, frame):
 
 
 def set_conf():
+    # Retrieve IP address information in GFS config for Chunkservers
     conf = configparser.ConfigParser()
-    conf.readfp(open('GFS.conf'))
+    conf.read_file(open('GFS.conf'))
     MasterService.exposed_Master.block_size = int(conf.get('master', 'block_size'))
     minions = conf.get('master', 'chunkServers').split(',')
     print(minions)
     for m in minions:
         id, host, port = m.split(":")
         # print("set_conf in master:", str(id))
-        MasterService.exposed_Master.minions[id] = (host, port)
+        MasterService.exposed_Master.minions[id] = (host, port)  # set up chunkserver mappings
 
+    # Attempt to connect to a primary master server if it is running (NOT IMPLEMENTED FOR NOW)
     try:
         con = rpyc.connect("127.0.0.1", port=8100)
         print(" ----- Connected to Primary back-up Server ------")
@@ -72,7 +75,8 @@ class MasterService(rpyc.Service):
             return blocks
 
         def exposed_delete(self, fname):
-            if not self.exists(fname): return False
+            if not self.exists(fname):
+                return False
             mapping_to_be_deleted = self.__class__.file_table.pop(fname, None)
             return mapping_to_be_deleted
 
@@ -109,13 +113,16 @@ class MasterService(rpyc.Service):
                 blocks.append((block_uuid, nodes_id))
 
                 # append block_id , Chunk_server_id, index_of_block
-                self.__class__.file_table[dest].append((block_uuid, nodes_id, i))
+                self.__class__.file_table[dest].append(
+                    (block_uuid, nodes_id, i))
 
             return blocks
 
 
 if __name__ == "__main__":
     set_conf()
+    # signal.signal(): Allows defining custom handlers to be executed when a signal is received
+    # signal.SIGINT: allows keyboard interrupt
     signal.signal(signal.SIGINT, int_handler)
     print("Master Server running")
     t = ThreadedServer(MasterService, port=2131)
