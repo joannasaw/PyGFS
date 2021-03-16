@@ -1,13 +1,17 @@
 import rpyc
 import os
+from pathlib import Path
 
 from rpyc.utils.server import ThreadedServer
 
-debug_Mode = True
+debug_Mode = False
 
-DATA_DIR = os.path.expanduser("~")
-DATA_DIR += "/gfs_root/"
+# DATA_DIR = os.path.expanduser("~")
+# DATA_DIR += "/gfs_root/"
 
+dir_path = os.path.dirname(os.path.realpath(__file__))
+BASE_PATH = str(Path(dir_path).parents[0])
+DATA_DIR = os.path.sep.join([BASE_PATH, "gfs_root"])
 
 class MinionService(rpyc.Service):
     class exposed_Chunks():
@@ -16,10 +20,8 @@ class MinionService(rpyc.Service):
         def exposed_put(self, block_uuid, data, minions):
             with open(DATA_DIR+str(block_uuid), 'w') as f:
                 f.write(data)
-                # print("put in minions", str(len(minions)))
-                print(data)
+                print("WRITING:", data)
             if len(minions) > 0:
-                print("put in minions, minions more than one")
                 self.forward(block_uuid, data, minions)
 
         def exposed_get(self, block_uuid):
@@ -30,9 +32,8 @@ class MinionService(rpyc.Service):
                 return f.read()
 
         def forward(self,block_uuid,data,minions):
-            print("forward in minions")
             if debug_Mode:
-                print("8888: forwarding to:")
+                print("-: forwarding to:")
                 print(block_uuid, minions)
             minion = minions[0]
             minions = minions[1:]
@@ -60,7 +61,7 @@ if __name__ == "__main__":
         port = int(port)
     else:
         port = 8888
-        
+
     t = ThreadedServer(MinionService, port=port)
-    print("starting chunserver service on port", port)
+    print("Starting chunkserver service on port", port)
     t.start()
