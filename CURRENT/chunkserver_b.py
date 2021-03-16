@@ -18,14 +18,14 @@ class MinionService(rpyc.Service):
         blocks = {}
 
         def exposed_put(self, block_uuid, data, minions):
-            with open(DATA_DIR+str(block_uuid), 'w') as f:
+            with open(os.path.sep.join([DATA_DIR, str(block_uuid)])), 'w') as f:
                 f.write(data)
                 print("WRITING:", data)
             if len(minions) > 0:
                 self.forward(block_uuid, data, minions)
 
         def exposed_get(self, block_uuid):
-            block_addr=DATA_DIR+str(block_uuid)
+            block_addr = os.path.sep.join([DATA_DIR, str(block_uuid)])
             if not os.path.isfile(block_addr):
                 return None
             with open(block_addr) as f:
@@ -44,7 +44,7 @@ class MinionService(rpyc.Service):
             minion.put(block_uuid,data,minions)
 
         def exposed_delete_block(self,block_uuid):
-            block_addr = DATA_DIR + str(block_uuid)
+            block_addr = os.path.sep.join([DATA_DIR, str(block_uuid)])
             if debug_Mode:
                 print("deleting")
                 print(block_addr)
