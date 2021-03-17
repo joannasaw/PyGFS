@@ -11,7 +11,8 @@ from rpyc.utils.server import ThreadedServer
 
 # This function basically stores the state of the master and its mapping to a local file when interrupted
 
-
+# when signal is received for keyboard cancel, this function runs to save 
+# TODO: create a backup server to integrate with this
 def int_handler(signal, frame):
     content = MasterService.exposed_Master.file_table
     try:
