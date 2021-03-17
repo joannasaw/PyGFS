@@ -56,7 +56,7 @@ class MasterService(rpyc.Service):
     class exposed_Master():
         file_table = {}
         minions = {}
-
+        
         block_size = 0
 
         def exposed_read(self, fname):
@@ -124,8 +124,7 @@ class MasterService(rpyc.Service):
                 blocks.append((block_uuid, nodes_id))
 
                 # append block_id , Chunk_server_id, index_of_block
-                self.__class__.file_table[dest].append(
-                    (block_uuid, nodes_id, i))
+                self.__class__.file_table[dest].append((block_uuid, nodes_id, i))
 
             return blocks
 
