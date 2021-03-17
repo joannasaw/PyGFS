@@ -5,54 +5,54 @@ import os
 debug_Mode = False
 
 
-def send_to_minion(block_uuid,data,minions):
+def send_to_chunkServer(block_uuid,data,chunkServers):
     if debug_Mode:
-        print("sending: " + str(block_uuid) + str(minions))
-        print("before minions:", minions)
-    minion = minions[0]
-    minions = minions[1:] # so far we think this will always be empty, should return multiple minions when we implement replication
+        print("sending: " + str(block_uuid) + str(chunkServers))
+        print("before chunkServers:", chunkServers)
+    chunkServer = chunkServers[0]
+    chunkServers = chunkServers[1:] # so far we think this will always be empty, should return multiple chunkServers when we implement replication
     if debug_Mode:
-        print("after minion", minion)
-        print("after minions:", minions)
-    host, port = minion
+        print("after chunkServer", chunkServer)
+        print("after chunkServers:", chunkServers)
+    host, port = chunkServer
     try:
         con = rpyc.connect(host, port=port)
-        minion = con.root.Chunks()
-        minion.put(block_uuid, data, minions)
+        chunkServer = con.root.Chunks()
+        chunkServer.put(block_uuid, data, chunkServers)
     except:
         print("\n----Chunk Server not found -------")
-        print("client: send_to_minion")
+        print("client: send_to_chunkServer")
         print("----Start Chunks.py then try again ------ \n \n ")
         sys.exit(1)
 
 
-def read_from_minion(block_uuid,minion):
-    host, port = minion
+def read_from_chunkServer(block_uuid,chunkServer):
+    host, port = chunkServer
 
     try:
         con = rpyc.connect(host, port=port)
-        minion = con.root.Chunks()
+        chunkServer = con.root.Chunks()
     except:
         print("\n----Chunk Server not found -------")
-        print("client: read_from_minion")
+        print("client: read_from_chunkServer")
         print("----Start Chunks.py then try again ------ \n \n ")
         sys.exit(1)
 
-    return minion.get(block_uuid)
+    return chunkServer.get(block_uuid)
 
 
-def delete_from_chunks(block_uuid, minion):
-    host, port = minion
+def delete_from_chunks(block_uuid, chunkServer):
+    host, port = chunkServer
     try:
         con = rpyc.connect(host, port=port)
-        minion = con.root.Chunks()
+        chunkServer = con.root.Chunks()
     except:
         print("\n----Chunk Server not found -------")
         print("client: delete_from_chunks")
         print("----Start Chunks.py then try again ------ \n \n ")
         sys.exit(1)
 
-    return minion.delete_block(block_uuid)
+    return chunkServer.delete_block(block_uuid)
 
 
 def get(master, fname):
@@ -64,8 +64,8 @@ def get(master, fname):
     for block in file_table:
         if debug_Mode:
             print(block)
-        for m in [master.get_minions()[_] for _ in block[1]]:
-            data = read_from_minion(block[0], m)
+        for m in [master.get_chunkServers()[_] for _ in block[1]]:
+            data = read_from_chunkServer(block[0], m)
             if data:
                 sys.stdout.write(data)
                 break
@@ -81,7 +81,7 @@ def delete(master, fname):
     print("File entry deleted from Master server table")
 
     for block in file_table:
-        for m in [master.get_minions()[_] for _ in block[1]]:
+        for m in [master.get_chunkServers()[_] for _ in block[1]]:
             condition = delete_from_chunks(block[0], m)
             if not condition:
                 print("Error: File not found in chunk servers")
@@ -90,14 +90,14 @@ def delete(master, fname):
 
 def write_b(master, b, data):
     block_uuid=b[0] #b[0] is the unique ID of each block
-    minions = [master.get_minions()[_] for _ in b[1]] # getting chunkserver details for the block
-    send_to_minion(block_uuid,data,minions)
+    chunkServers = [master.get_chunkServers()[_] for _ in b[1]] # getting chunkserver details for the block
+    send_to_chunkServer(block_uuid,data,chunkServers)
     if debug_Mode:
         print(data)
-        print("put master.get_minions:", master.get_minions())
+        print("put master.get_chunkServers:", master.get_chunkServers())
         print("put b:", b)
         print("put b[1]:", b[1])
-        print("put minions:", minions)
+        print("put chunkServers:", chunkServers)
 
 def put(master, source, dest): # will overwrite existing file with same name/dest
     size = os.path.getsize(source)  # returns the size of file in integer
@@ -113,7 +113,6 @@ def put(master, source, dest): # will overwrite existing file with same name/des
 def create(master, string_data, dest):
     size = len(string_data.encode('utf-8')) 
     # size = os.path.getsize(source)  # returns the size of file in integer
-    print(size)
     blocks = master.write(dest, size) # gets the blocks details from master
     total_data = string_data
     #each block is like a level

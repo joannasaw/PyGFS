@@ -32,12 +32,12 @@ def set_conf():
     conf = configparser.ConfigParser()
     conf.read_file(open('GFS.conf'))
     MasterService.exposed_Master.block_size = int(conf.get('master', 'block_size'))
-    minions = conf.get('master', 'chunkServers').split(',')
-    # print(minions)
-    for m in minions:
+    chunkServers = conf.get('master', 'chunkServers').split(',')
+    # print(chunkServers)
+    for m in chunkServers:
         id, host, port = m.split(":")
         # print("set_conf in master:", str(id))
-        MasterService.exposed_Master.minions[id] = (host, port)  # set up chunkserver mappings
+        MasterService.exposed_Master.chunkServers[id] = (host, port)  # set up chunkserver mappings
 
     # Attempt to connect to a primary master server if it is running (NOT IMPLEMENTED FOR NOW)
     try:
@@ -55,7 +55,7 @@ def set_conf():
 class MasterService(rpyc.Service):
     class exposed_Master():
         file_table = {}
-        minions = {}
+        chunkServers = {}
         
         block_size = 0
 
@@ -104,9 +104,9 @@ class MasterService(rpyc.Service):
         def exposed_get_block_size(self):
             return self.__class__.block_size
 
-        def exposed_get_minions(self):
-            print("master get_minions:", self.__class__.minions)
-            return self.__class__.minions
+        def exposed_get_chunkServers(self):
+            print("master get_chunkServers:", self.__class__.chunkServers)
+            return self.__class__.chunkServers
 
         def calc_num_blocks(self, size):
             return int(math.ceil(float(size) / self.__class__.block_size))
@@ -120,7 +120,7 @@ class MasterService(rpyc.Service):
                 block_uuid = uuid.uuid1()
                 block_uuid = str(block_uuid)
                 # Master is randomly assigning Chunkservers to each block
-                nodes_id = random.choice(list(self.__class__.minions.keys()))
+                nodes_id = random.choice(list(self.__class__.chunkServers.keys()))
                 blocks.append((block_uuid, nodes_id))
 
                 # append block_id , Chunk_server_id, index_of_block
@@ -134,7 +134,7 @@ class MasterService(rpyc.Service):
                 block_uuid = uuid.uuid1()
                 block_uuid = str(block_uuid)
                 # Master is randomly assigning Chunkservers to each block
-                nodes_id = random.choice(list(self.__class__.minions.keys()))
+                nodes_id = random.choice(list(self.__class__.chunkServers.keys()))
                 blocks.append((block_uuid, nodes_id))
 
             return blocks
