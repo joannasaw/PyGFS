@@ -100,46 +100,21 @@ def write_b(master, b, data):
         print("put minions:", minions)
 
 def put(master, source, dest): # will overwrite existing file with same name/dest
-<<<<<<< HEAD
     size = os.path.getsize(source)  # returns the size of file in integer
     # print(size)
     blocks = master.write(dest, size) # gets the blocks of from  TODO: this adds file name to file table, if machine fails to upload, file name still exists but does not reference to any blocks i.e. will still be seen in list
-=======
-    size = os.path.getsize(source)  # gets the size of the file we are trying to put
-    print(size)
-    # obtain address and id of available chunkservers that client can write to
-    blocks = master.write(dest, size) # gets the blocks of from master 
-    # TODO: this adds file name to file table, if machine fails to upload, file name still exists but does not reference to any blocks i.e. will still be seen in list
->>>>>>> sean
     with open(source) as f:
         # loop through each of the blocks given by master and write to it
         for b in blocks:
             data = f.read(master.get_block_size())
-<<<<<<< HEAD
             write_b(master, b, data)
-=======
-            block_uuid=b[0] # b[0] is the unique ID of each block
-            minions = [master.get_minions()[_] for _ in b[1]] # gets chunkserver details for the chunk
-            send_to_minion(block_uuid,data,minions) # tells chunkserver we want to write the data to specific block
-            if debug_Mode:
-                print(data)
-                print("put master.get_minions:", master.get_minions())
-                print("put b:", b)
-                print("put b[1]:", b[1])
-                print("put minions:", minions)
->>>>>>> sean
     print("File is hosted across chunk servers successfully!")
 
 def create(master, string_data, dest):
     size = len(string_data.encode('utf-8')) 
     # size = os.path.getsize(source)  # returns the size of file in integer
-<<<<<<< HEAD
-    # print(size)
-    blocks = master.write(dest, size) # gets the blocks of from master
-=======
     print(size)
     blocks = master.write(dest, size) # gets the blocks details from master
->>>>>>> sean
     total_data = string_data
     #each block is like a level
     for b in blocks:
@@ -177,7 +152,7 @@ def main(args):
 
     while True:
         try:
-            request = input("\nTYPE 'list', 'upload', 'write', 'read', 'append' or 'delete': (l/w/r/a/d) ")
+            request = input("\nTYPE 'list', 'upload', 'create', 'read', 'append' or 'delete': (l/u/c/r/a/d) ")
 
             if request == "list" or request == "l":
                 list_files(master)
@@ -189,7 +164,7 @@ def main(args):
                 put(master, original_file_name, dest) #TODO: currently uploads an existing file, what about creating a new file?
 
             # write here is a function to create a new file + upload 
-            elif request == "write" or request == "w":
+            elif request == "create" or request == "c":
                 dest = input("DFS FILE NAME: ")
                 data = input("CONTENT:")
                 # client.write(file_name, content)
