@@ -67,10 +67,21 @@ class MasterService(rpyc.Service):
             if self.exists(dest):
                 pass
 
-            self.__class__.file_table[dest] = []
+            self.__class__.file_table[dest] = [] # overwrites?
 
             num_blocks = self.calc_num_blocks(size)
-            blocks = self.alloc_blocks(dest, num_blocks)
+            blocks = self.alloc_write(dest, num_blocks)
+            # master returns block to client
+            return blocks
+
+        def exposed_write_append(self, dest, size):
+            if self.exists(dest):
+                pass
+
+            # self.__class__.file_table[dest] = []
+
+            num_blocks = self.calc_num_blocks(size)
+            blocks = self.alloc_append(dest, num_blocks)
             # master returns block to client
             return blocks
 
@@ -103,7 +114,7 @@ class MasterService(rpyc.Service):
         def exists(self, file):
             return file in self.__class__.file_table
 
-        def alloc_blocks(self, dest, num):
+        def alloc_write(self, dest, num):
             blocks = []
             for i in range(0, num):
                 block_uuid = uuid.uuid1()
@@ -118,6 +129,23 @@ class MasterService(rpyc.Service):
 
             return blocks
 
+        def alloc_blocks(self, num):
+            blocks = []
+            for i in range(0, num):
+                block_uuid = uuid.uuid1()
+                block_uuid = str(block_uuid)
+                # Master is randomly assigning Chunkservers to each block
+                nodes_id = random.choice(list(self.__class__.minions.keys()))
+                blocks.append((block_uuid, nodes_id))
+
+            return blocks
+
+        def alloc_append(self, filename, num_append_blocks): # append blocks
+            block_uuids = self.__class__.file_table[filename]
+            append_block_uuids = self.alloc_blocks(num_append_blocks)
+            block_uuids.extend(append_block_uuids)
+            return append_block_uuids
+
 
 if __name__ == "__main__":
     port = 2131
@@ -128,5 +156,3 @@ if __name__ == "__main__":
     print("Master server running on port", port)
     t = ThreadedServer(MasterService, port=port)
     t.start()
-
-    
