@@ -13,16 +13,16 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 BASE_PATH = str(Path(dir_path).parents[0])
 DATA_DIR = os.path.sep.join([BASE_PATH, "gfs_root"])
 
-class MinionService(rpyc.Service):
+class ChunkServerService(rpyc.Service):
     class exposed_Chunks():
         blocks = {}
 
-        def exposed_put(self, block_uuid, data, minions):
+        def exposed_put(self, block_uuid, data, chunkServers):
             with open(os.path.sep.join([DATA_DIR, str(block_uuid)]), 'w') as f:
                 f.write(data)
                 print("WRITING:", data)
-            if len(minions) > 0:
-                self.forward(block_uuid, data, minions)
+            if len(chunkServers) > 0:
+                self.forward(block_uuid, data, chunkServers)
 
         def exposed_get(self, block_uuid):
             block_addr = os.path.sep.join([DATA_DIR, str(block_uuid)])
@@ -31,17 +31,17 @@ class MinionService(rpyc.Service):
             with open(block_addr) as f:
                 return f.read()
 
-        def forward(self,block_uuid,data,minions):
+        def forward(self,block_uuid,data,chunkServers):
             if debug_Mode:
                 print("-: forwarding to:")
-                print(block_uuid, minions)
-            minion = minions[0]
-            minions = minions[1:]
-            host, port = minion
+                print(block_uuid, chunkServers)
+            chunkServer = chunkServers[0]
+            chunkServers = chunkServers[1:]
+            host, port = chunkServer
 
             con = rpyc.connect(host, port=port)
-            minion = con.root.Chunks()
-            minion.put(block_uuid,data,minions)
+            chunkServer = con.root.Chunks()
+            chunkServer.put(block_uuid,data,chunkServers)
 
         def exposed_delete_block(self,block_uuid):
             block_addr = os.path.sep.join([DATA_DIR, str(block_uuid)])
@@ -62,6 +62,6 @@ if __name__ == "__main__":
     else:
         port = 8888
 
-    t = ThreadedServer(MinionService, port=port)
+    t = ThreadedServer(ChunkServerService, port=port)
     print("Starting chunkserver service on port", port)
     t.start()
