@@ -159,6 +159,7 @@ def main(args):
                 # client.write(file_name, content)
                 put(master, original_file_name, dest) #TODO: currently uploads an existing file, what about creating a new file?
 
+            # write here is a function to create a new file + upload 
             elif request == "write" or request == "w":
                 dest = input("DFS FILE NAME: ")
                 data = input("CONTENT:")
