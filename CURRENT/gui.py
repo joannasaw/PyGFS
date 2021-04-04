@@ -106,18 +106,17 @@ def createFile():
 
 
 ws = Tk()
-ws.title("PythonGuides")
-ws.geometry("400x500")
+ws.title("Budget GFS")
+ws.geometry("1000x500")
 ws['bg'] = '#2a636e'
 
-# adding frame
-
-
+# adding frames
 frame = Frame(ws)
 frame.pack(pady=20)
 
 frame1 = Frame(frame, relief="ridge", width=100)
 frame1.pack(side=LEFT)
+
 # adding scrollbars
 ver_sb = Scrollbar(frame, orient=VERTICAL)
 ver_sb.pack(side=RIGHT, fill=BOTH)
@@ -125,11 +124,7 @@ ver_sb.pack(side=RIGHT, fill=BOTH)
 hor_sb = Scrollbar(frame, orient=HORIZONTAL)
 hor_sb.pack(side=BOTTOM, fill=BOTH)
 
-# list of files
-# listfiles = Label(frame, width=20, text="Empty List")
-# listfiles.pack(side=LEFT)
 
-refreshAllFiles()
 # adding writing space
 txtarea = Text(frame, width=60, height=20)
 txtarea.pack(side=LEFT)
@@ -145,10 +140,14 @@ hor_sb.config(command=txtarea.xview)
 pathh = Entry(ws)
 pathh.pack(expand=True, fill=X, padx=10)
 
-notice = Label(ws, text="Welcome to cheap GFS!")
+# adding notice text below to show status messages
+notice = Label(ws, text="Welcome to low budget GFS!")
 notice.pack()
 
-# adding buttons
+# Fetch all the available files on the server once at the start
+refreshAllFiles()
+
+# adding all the buttons
 Button(
     ws,
     text="Open File",
