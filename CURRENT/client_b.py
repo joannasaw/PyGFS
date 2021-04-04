@@ -134,6 +134,7 @@ def create(master, string_data, dest):
         total_data = total_data[master.get_block_size():]
         write_b(master, b, data)
     print("File is hosted across chunk servers successfully!")
+    return True
 
 
 def write_append(master, string_data, dest):

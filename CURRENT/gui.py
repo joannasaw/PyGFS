@@ -95,6 +95,16 @@ def deleteFile():
         notice.config(text="Error deleting file from Server")
 
 
+def createFile():
+    file_name = pathh.get()
+    file_content = txtarea.get("1.0", END)
+
+    success = create(master, file_content, file_name)
+    if success:
+        notice.config(text="File successfully created on Server")
+        refreshAllFiles()
+
+
 ws = Tk()
 ws.title("PythonGuides")
 ws.geometry("400x500")
@@ -167,6 +177,12 @@ Button(
     ws,
     text="Delete File",
     command=deleteFile
+).pack(side=LEFT, expand=True, fill=X, padx=20, pady=20)
+
+Button(
+    ws,
+    text="Create File",
+    command=createFile
 ).pack(side=LEFT, expand=True, fill=X, padx=20, pady=20)
 
 Button(
