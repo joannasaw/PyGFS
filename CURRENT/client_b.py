@@ -81,7 +81,7 @@ def delete(master, fname):
     file_table = master.delete(fname)
     if not file_table:
         print("File is not in the list. \n  Check list of files first")
-        return
+        return False
     print("File entry deleted from Master server table")
 
     for block in file_table:
@@ -89,8 +89,9 @@ def delete(master, fname):
             condition = delete_from_chunks(block[0], m)
             if not condition:
                 print("Error: File not found in chunk servers")
-                return
+                return False
     print("File deleted from chunk servers")
+    return True
 
 
 def write_b(master, b, data):

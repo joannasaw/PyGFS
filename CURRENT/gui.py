@@ -5,23 +5,30 @@ from client_b import *
 import rpyc
 import sys
 import os
-# functions
+
+# Attempt connectiong with Master Server as a Client GUI
 try:
     con = rpyc.connect("localhost", port=2131)
     master = con.root.Master()
     print("Successfully connected to Master Server")
-    # refreshAllFiles()
 except:
     print("Master Server not found ")
     print("launch Master Server and try again")
 
+# Displays the list of available filenames hosted on the server
+
 
 def refreshAllFiles():
+    for label in list(frame1.children.values()):
+        label.destroy()
+
     files = master.get_list_of_files()
     print(files)
     for each_file in files:
-        label = Label(frame, text=each_file)
+        label = Label(frame1, text=each_file)
         label.pack(side=LEFT, expand=True, fill='x')
+
+# Opens local directory to import file into GUI for preview before upload
 
 
 def openFile():
@@ -30,14 +37,16 @@ def openFile():
         title="Open Text file",
         filetypes=(("Text Files", "*.txt"),)
     )
+    pathh.delete(0, 'end')
     pathh.insert(END, tf)
     tf = open(tf)
+
+    # set global filename variable for uploadFile() function to use
     global filename
     filename = os.path.split(tf.name)[1]
     file_cont = tf.read()
-    # print(file_cont)
+    txtarea.delete("1.0", "end")
     txtarea.insert(END, file_cont)
-
     tf.close()
 
 
@@ -54,9 +63,10 @@ def uploadFile():
     success = put(master, filename, filename)
 
     if success:
-        notice.config(text="File successfully uploaded")
+        notice.config(text="File successfully uploaded to Server")
+        refreshAllFiles()
     else:
-        notice.config(text="Error in uploading file")
+        notice.config(text="Error in uploading file to Server")
 
 
 def saveFile():
@@ -75,15 +85,29 @@ def saveFile():
     tf.close()
 
 
+def deleteFile():
+    file_name = pathh.get()
+    success = delete(master, file_name)
+    if success:
+        notice.config(text="File successfully deleted from Server")
+        refreshAllFiles()
+    else:
+        notice.config(text="Error deleting file from Server")
+
+
 ws = Tk()
 ws.title("PythonGuides")
 ws.geometry("400x500")
 ws['bg'] = '#2a636e'
 
 # adding frame
+
+
 frame = Frame(ws)
 frame.pack(pady=20)
 
+frame1 = Frame(frame, relief="ridge", width=100)
+frame1.pack(side=LEFT)
 # adding scrollbars
 ver_sb = Scrollbar(frame, orient=VERTICAL)
 ver_sb.pack(side=RIGHT, fill=BOTH)
@@ -111,7 +135,7 @@ hor_sb.config(command=txtarea.xview)
 pathh = Entry(ws)
 pathh.pack(expand=True, fill=X, padx=10)
 
-notice = Label(ws, text="Welcome!")
+notice = Label(ws, text="Welcome to cheap GFS!")
 notice.pack()
 
 # adding buttons
@@ -137,6 +161,12 @@ Button(
     ws,
     text="Read File",
     command=readFile
+).pack(side=LEFT, expand=True, fill=X, padx=20, pady=20)
+
+Button(
+    ws,
+    text="Delete File",
+    command=deleteFile
 ).pack(side=LEFT, expand=True, fill=X, padx=20, pady=20)
 
 Button(
