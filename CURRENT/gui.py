@@ -24,10 +24,16 @@ def refreshAllFiles():
 
     files = master.get_list_of_files()
     print(files)
-    for each_file in files:
-        label = Label(frame1, text=each_file)
-        label.pack(side=LEFT, expand=True, fill='x')
+    for i, each_file in enumerate(files):
+        label = Button(frame1,
+                       text=each_file,
+                       command=lambda file_name=each_file: fillPath(file_name)).pack(side=TOP, fill=BOTH)
 
+
+def fillPath(file_name):
+    print(file_name)
+    pathh.delete(0, 'end')
+    pathh.insert(END, file_name)
 # Opens local directory to import file into GUI for preview before upload
 
 
@@ -129,8 +135,8 @@ ws['bg'] = '#2a636e'
 frame = Frame(ws)
 frame.pack(pady=20)
 
-frame1 = Frame(frame, relief="ridge", width=100)
-frame1.pack(side=LEFT)
+frame1 = Frame(frame, width=100)
+frame1.pack(expand=True, fill='x', side=LEFT)
 
 # adding scrollbars
 ver_sb = Scrollbar(frame, orient=VERTICAL)
