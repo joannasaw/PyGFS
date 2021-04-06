@@ -1,5 +1,5 @@
 from tkinter import *
-from tkinter import filedialog
+from tkinter import filedialog, messagebox
 from client_b import *
 
 import rpyc
@@ -11,10 +11,10 @@ try:
     con = rpyc.connect("localhost", port=2131)
     master = con.root.Master()
     print("Successfully connected to Master Server")
+
 except:
     print("Master Server not found ")
     print("launch Master Server and try again")
-
 # Displays the list of available filenames hosted on the server
 
 
@@ -63,36 +63,36 @@ def uploadFile():
     success = put(master, filename, filename)
 
     if success:
-        notice.config(text="File successfully uploaded to Server")
+        messagebox.showinfo(
+            'Upload Success', "File successfully uplaoded to Server")
         refreshAllFiles()
     else:
-        notice.config(text="Error in uploading file to Server")
+        messagebox.showinfo('Upload Fail', "Error uploading file to Server")
 
 
 def saveFile():
-    tf = filedialog.asksaveasfile(
-        mode='w',
-
+    tf = filedialog.asksaveasfilename(
         title="Save file",
         defaultextension=".txt"
     )
-    tf.config(mode='w')
 
-    pathh.insert(END, tf)
+    f = open(tf, 'w')
     data = str(txtarea.get(1.0, END))
-    tf.write(data)
-
-    tf.close()
+    f.write(data)
+    f.close()
+    messagebox.showinfo('Success', 'File Saved')
 
 
 def deleteFile():
     file_name = pathh.get()
     success = delete(master, file_name)
     if success:
-        notice.config(text="File successfully deleted from Server")
+        messagebox.showinfo(
+            'Delete Success', 'File Successfully deleted from Server')
         refreshAllFiles()
     else:
-        notice.config(text="Error deleting file from Server")
+        messagebox.showinfo(
+            'Delete Failure', 'Error deleting file from Server')
 
 
 def createFile():
@@ -101,7 +101,8 @@ def createFile():
 
     success = create(master, file_content, file_name)
     if success:
-        notice.config(text="File successfully created on Server")
+        messagebox.showinfo(
+            'Create Success', 'File successfully created on Server')
         refreshAllFiles()
     else:
         notice.config(text="Error creating file on Server")
@@ -109,14 +110,14 @@ def createFile():
 
 def appendFile():
     file_name = pathh.get()
-    content_to_append = txtarea.get("1.0", END)
-
+    content_to_append = str(txtarea.get("1.0", END))
+    print("content:", content_to_append)
     success = write_append(master, content_to_append, file_name)
     if success:
-        notice.config(text="Successfully Appended to File")
+        messagebox.showinfo('Append Success', 'Successfully Appended to File')
         refreshAllFiles()
     else:
-        notice.config(text="Error appending to file")
+        messagebox.showinfo('Append Failure', 'Error Appending to File')
 
 
 ws = Tk()
@@ -154,13 +155,16 @@ hor_sb.config(command=txtarea.xview)
 pathh = Entry(ws)
 pathh.pack(expand=True, fill=X, padx=10)
 
-# adding notice text below to show status messages
-notice = Label(ws, text="Welcome to low budget GFS!")
-notice.pack()
-
 # Fetch all the available files on the server once at the start
 refreshAllFiles()
 
+Button(
+    ws,
+    text="Refresh",
+    command=refreshAllFiles
+
+
+).pack(padx=20)
 # adding all the buttons
 Button(
     ws,
@@ -176,8 +180,8 @@ Button(
 
 Button(
     ws,
-    text="Upload File",
-    command=uploadFile
+    text="Create File",
+    command=createFile
 ).pack(side=LEFT, expand=True, fill=X, padx=20, pady=20)
 
 Button(
@@ -188,15 +192,17 @@ Button(
 
 Button(
     ws,
+    text="Upload File",
+    command=uploadFile
+).pack(side=LEFT, expand=True, fill=X, padx=20, pady=20)
+
+
+Button(
+    ws,
     text="Delete File",
     command=deleteFile
 ).pack(side=LEFT, expand=True, fill=X, padx=20, pady=20)
 
-Button(
-    ws,
-    text="Create File",
-    command=createFile
-).pack(side=LEFT, expand=True, fill=X, padx=20, pady=20)
 
 Button(
     ws,
@@ -209,6 +215,5 @@ Button(
     text="Exit",
     command=lambda: ws.destroy()
 ).pack(side=LEFT, expand=True, fill=X, padx=20, pady=20)
-
 
 ws.mainloop()
