@@ -17,12 +17,18 @@ class ChunkServerService(rpyc.Service):
     class exposed_Chunks():
         blocks = {}
 
-        def exposed_put(self, block_uuid, data, chunkServers):
+        def exposed_put(self, block_uuid, data, chunkReplicas):
             with open(os.path.sep.join([DATA_DIR, str(block_uuid)]), 'w') as f:
                 f.write(data)
                 print("WRITING:", data)
-            if len(chunkServers) > 0:
-                self.forward(block_uuid, data, chunkServers)
+            if len(chunkReplicas) > 0:
+                self.forward(block_uuid, data, chunkReplicas)
+        
+        def exposed_replicate(self, block_uuid, data):
+            with open(os.path.sep.join([DATA_DIR, str(block_uuid)]), 'w') as f:
+                f.write(data)
+                print("WRITING:", data)
+
 
         def exposed_get(self, block_uuid):
             block_addr = os.path.sep.join([DATA_DIR, str(block_uuid)])
@@ -31,17 +37,17 @@ class ChunkServerService(rpyc.Service):
             with open(block_addr) as f:
                 return f.read()
 
-        def forward(self,block_uuid,data,chunkServers):
+        def forward(self,block_uuid,data,chunkReplicas):
             if debug_Mode:
                 print("-: forwarding to:")
-                print(block_uuid, chunkServers)
-            chunkServer = chunkServers[0]
-            chunkServers = chunkServers[1:]
-            host, port = chunkServer
-
-            con = rpyc.connect(host, port=port)
-            chunkServer = con.root.Chunks()
-            chunkServer.put(block_uuid,data,chunkServers)
+                print(block_uuid, chunkReplicas)
+            #chunkServer = chunkServers[0]
+            #chunkServers = chunkServers[1:]
+            for i in chunkReplicas:
+                host, port = i
+                con = rpyc.connect(host, port=port)
+                chunkReplica = con.root.Chunks()
+                chunkReplica.replicate(block_uuid,data)
 
         def exposed_delete_block(self,block_uuid):
             block_addr = os.path.sep.join([DATA_DIR, str(block_uuid)])

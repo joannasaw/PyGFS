@@ -5,13 +5,15 @@ import os
 debug_Mode = False
 
 
-def send_to_chunkServer(block_uuid, data, chunkServers):
+def send_to_chunkServer(block_uuid, data, chunkServers, chunkReplicas):
     if debug_Mode:
         print("sending: " + str(block_uuid) + str(chunkServers))
         print("before chunkServers:", chunkServers)
     chunkServer = chunkServers[0]
-    # so far we think this will always be empty, should return multiple chunkServers when we implement replication
+    # so far we think this will always be empty, should return multiple chunkServers when we implement replication 
+    # edit: probably dont need this alr, since it's change to chunkReplicas
     chunkServers = chunkServers[1:]
+
     if debug_Mode:
         print("after chunkServer", chunkServer)
         print("after chunkServers:", chunkServers)
@@ -19,9 +21,9 @@ def send_to_chunkServer(block_uuid, data, chunkServers):
     try:
         con = rpyc.connect(host, port=port)
         chunkServer = con.root.Chunks()
-        chunkServer.put(block_uuid, data, chunkServers)
+        chunkServer.put(block_uuid, data, chunkReplicas)
     except:
-        print("\n----Chunk Server not found -------")
+        print("\n----Chunk Server not found -------"+str(host)+":"+str(port))
         print("client: send_to_chunkServer")
         print("----Start Chunks.py then try again ------ \n \n ")
         sys.exit(1)
@@ -98,7 +100,9 @@ def write_b(master, b, data):
     block_uuid = b[0]  # b[0] is the unique ID of each block
     # getting chunkserver details for the block
     chunkServers = [master.get_chunkServers()[_] for _ in b[1]]
-    send_to_chunkServer(block_uuid, data, chunkServers)
+    chunkReplicas = [master.get_chunkReplicas()[_] for _ in b[2]]
+
+    send_to_chunkServer(block_uuid, data, chunkServers, chunkReplicas)
     if debug_Mode:
         print(data)
         print("put master.get_chunkServers:", master.get_chunkServers())
@@ -135,7 +139,6 @@ def create(master, string_data, dest):
         write_b(master, b, data)
     print("File is hosted across chunk servers successfully!")
     return True
-
 
 def write_append(master, string_data, dest):
     if master.get_file_table_entry(dest) == None:
