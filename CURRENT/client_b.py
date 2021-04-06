@@ -150,6 +150,8 @@ def write_append(master, string_data, dest):
         # remove first n elements
         total_data = total_data[master.get_block_size():]
         write_b(master, b, data)
+    print("Successfully appended to file!")
+    return True
 
 
 def list_files(master):

@@ -103,6 +103,20 @@ def createFile():
     if success:
         notice.config(text="File successfully created on Server")
         refreshAllFiles()
+    else:
+        notice.config(text="Error creating file on Server")
+
+
+def appendFile():
+    file_name = pathh.get()
+    content_to_append = txtarea.get("1.0", END)
+
+    success = write_append(master, content_to_append, file_name)
+    if success:
+        notice.config(text="Successfully Appended to File")
+        refreshAllFiles()
+    else:
+        notice.config(text="Error appending to file")
 
 
 ws = Tk()
@@ -182,6 +196,12 @@ Button(
     ws,
     text="Create File",
     command=createFile
+).pack(side=LEFT, expand=True, fill=X, padx=20, pady=20)
+
+Button(
+    ws,
+    text="Append File",
+    command=appendFile
 ).pack(side=LEFT, expand=True, fill=X, padx=20, pady=20)
 
 Button(
