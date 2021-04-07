@@ -124,11 +124,11 @@ class MasterService(rpyc.Service):
             return self.__class__.num_replica
 
         def exposed_get_chunkServers(self):
-            print("master get_chunkServers:", self.__class__.chunkServers)
+            #print("master get_chunkServers:", self.__class__.chunkServers)
             return self.__class__.chunkServers
 
         def exposed_get_chunkReplicas(self):
-            print("master get_chunkReplicas:", self.__class__.chunkReplicas)
+            #print("master get_chunkReplicas:", self.__class__.chunkReplicas)
             return self.__class__.chunkReplicas
 
         def calc_num_blocks(self, size):
