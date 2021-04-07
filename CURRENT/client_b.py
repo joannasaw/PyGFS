@@ -22,7 +22,7 @@ def send_to_chunkServer(block_uuid, data, chunkServers, chunkReplicas):
         con = rpyc.connect(host, port=port)
         chunkServer = con.root.Chunks()
         chunkServer.put(block_uuid, data, chunkReplicas)
-    except:
+    except Exception as e:
         print("\n----Chunk Server not found -------"+str(host)+":"+str(port))
         print("client: send_to_chunkServer")
         print("----Start Chunks.py then try again ------ \n \n ")
@@ -166,7 +166,7 @@ def main(args):
     try:
         con = rpyc.connect("localhost", port=2131)
         master = con.root.Master()
-    except:
+    except Exception as e:
         print("Master Server not found ")
         print("launch Master Server and try again")
         return

@@ -17,6 +17,9 @@ class ChunkServerService(rpyc.Service):
     class exposed_Chunks():
         blocks = {}
 
+        def exposed_get_heartbeat(self): # this is an exposed method
+            return "I'm ok"
+
         def exposed_put(self, block_uuid, data, chunkReplicas):
             with open(os.path.sep.join([DATA_DIR, str(block_uuid)]), 'w') as f:
                 f.write(data)
