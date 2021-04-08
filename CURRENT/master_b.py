@@ -6,12 +6,13 @@ import configparser
 import signal
 import sys
 import json
-
+from pprint import pprint
 from rpyc.utils.server import ThreadedServer
+from threading import Timer
 
 # This function basically stores the state of the master and its mapping to a local file when interrupted
 
-# when signal is received for keyboard cancel, this function runs to save 
+# when signal is received for keyboard cancel, this function runs to save
 # TODO: create a backup server to integrate with this
 def int_handler(signal, frame):
     content = MasterService.exposed_Master.file_table
@@ -27,53 +28,69 @@ def int_handler(signal, frame):
 
     sys.exit(0)
 
-
-def set_conf():
-    # Retrieve IP address information in GFS config for Chunkservers
-    conf = configparser.ConfigParser()
-    conf.read_file(open('GFS.conf'))
-    MasterService.exposed_Master.block_size = int(conf.get('master', 'block_size'))
-    MasterService.exposed_Master.num_replica = int(conf.get('master', 'num_replica'))
-    chunkServers = conf.get('master', 'chunkServers').split(',')
-    chunkReplicas = conf.get('master','chunkReplicas').split(',')
-    # print(chunkServers)
-    
-    for m in chunkServers:
-        id, host, port = m.split(":")
-        # print("set_conf in master:", str(id))
-        MasterService.exposed_Master.chunkServers[id] = (host, port)  # set up chunkserver mappings
-
-    for m in chunkReplicas:
-        id, host, port = m.split(":")
-        # print("set_conf in master:", str(id))
-        MasterService.exposed_Master.chunkReplicas[id] = (host, port)  # set up chunkserver's replicas mappings
-
-    # Check if NUMBER OF REPLICATIONS IS HIGHER THAN NUMBER OF CHUNKSERVERS
-    if MasterService.exposed_Master.num_replica > (len(MasterService.exposed_Master.chunkServers)+len(MasterService.exposed_Master.chunkReplicas))/len(MasterService.exposed_Master.chunkServers) :
-        print("WARNING: NUMBER OF REPLICATIONS IS HIGHER THAN NUMBER OF CHUNKSERVERS")
-
-    # Attempt to connect to a primary master server if it is running (NOT IMPLEMENTED FOR NOW)
+def get_heartbeat(host, port):
+    HEARTBEAT_INTERVAL = 5
     try:
-        con = rpyc.connect("127.0.0.1", port=8100)
-        print(" ----- Connected to Primary back-up Server ------")
-        back_up_server = con.root.BackUpServer()
-        file_table_backup = back_up_server.getFileTable()
-        MasterService.exposed_Master.file_table = json.loads(file_table_backup)
-        con.close()
-    except:
-        print("\n -----Info: Primary backup Server not found !!! ------- ")
-        print(" -----Start the primary_backup_server ------- \n \n ")
+        print("Heartbeat to chunkserver: {}, {} successful".format(host, port))
+        conn = rpyc.connect(host, port)
+        # msg = conn.root.Chunks().get_heartbeat()
+        # print(msg)
+        conn.root.Chunks().get_heartbeat()
 
+    except Exception as e:
+        print("Heartbeat to chunkserver: {}, {} failed".format(host, port))
+        
+    heartbeat_timer = Timer(HEARTBEAT_INTERVAL, get_heartbeat, args=[host,port])
+    heartbeat_timer.start()
 
 class MasterService(rpyc.Service):
     class exposed_Master():
+        print("start")
         file_table = {}
         chunkServers = {}
         chunkReplicas = {}
         
+        # Retrieve IP address information in GFS config for Chunkservers
+        conf = configparser.ConfigParser()
+        conf.read_file(open('GFS.conf'))
+        block_size = int(conf.get('master', 'block_size'))
+        num_replica = int(conf.get('master', 'num_replica'))
+        chunkServers_conf = conf.get('master', 'chunkServers').split(',')
+        chunkReplicas_conf = conf.get('master','chunkReplicas').split(',')
         
-        block_size = 0
-        num_replica = 0
+        for m in chunkServers_conf:
+            id, host, port = m.split(":")
+            # print("set_conf in master:", str(id))
+            chunkServers[id] = (host, port)  # set up chunkserver mappings
+
+        for m in chunkReplicas_conf:
+            id, host, port = m.split(":")
+            # print("set_conf in master:", str(id))
+            chunkReplicas[id] = (host, port)  # set up chunkserver's replicas mappings
+
+        # Check if NUMBER OF REPLICATIONS IS HIGHER THAN NUMBER OF CHUNKSERVERS
+        if num_replica > (len(chunkServers)+len(chunkReplicas))/len(chunkServers) :
+            print("WARNING: NUMBER OF REPLICATIONS IS HIGHER THAN NUMBER OF CHUNKSERVERS")
+
+        # Attempt to connect to a primary master server if it is running (NOT IMPLEMENTED FOR NOW)
+        try:
+            con = rpyc.connect("127.0.0.1", port=8100)
+            print(" ----- Connected to Shadow Master ------")
+            back_up_server = con.root.BackUpServer()
+            file_table_backup = back_up_server.getFileTable()
+            file_table = json.loads(file_table_backup)
+            con.close()
+        except:
+            print("\n -----Info: Shadow Master not found !!! ------- ")
+            print(" -----Start the Shadow Master ------- \n \n ")
+
+        for chunkServer_idx in chunkServers:
+            host, port = chunkServers[chunkServer_idx]
+            get_heartbeat(host, port)
+
+        for chunkReplica_idx in chunkReplicas:
+            host, port = chunkReplicas[chunkReplica_idx]
+            get_heartbeat(host, port)
 
         def exposed_read(self, fname):
             mapping = self.__class__.file_table[fname]
@@ -146,7 +163,7 @@ class MasterService(rpyc.Service):
                 nodes_id = random.choice(list(self.__class__.chunkServers.keys()))
                 replicas_ids = []
                 for i in range(self.__class__.num_replica-1):
-                    replicas_ids.append(nodes_id+"."+str(i+1)) 
+                    replicas_ids.append(str(nodes_id)+"."+str(i+1))
                 blocks.append((block_uuid, nodes_id, replicas_ids))
 
                 # append block_id , Chunk_server_id, Chunk_server's replicas_ids, index_of_block
@@ -174,7 +191,6 @@ class MasterService(rpyc.Service):
 
 if __name__ == "__main__":
     port = 2131
-    set_conf()
     # signal.signal(): Allows defining custom handlers to be executed when a signal is received
     # signal.SIGINT: allows keyboard interrupt
     signal.signal(signal.SIGINT, int_handler)
