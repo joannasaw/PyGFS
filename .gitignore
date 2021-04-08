@@ -1,3 +1,6 @@
 gfs_root/
 .DS_Store
+CURRENT/Dockerfile.Chunks
+CURRENT/Dockerfile.Client
+CURRENT/Dockerfile.mster
 CURRENT/backup_json
