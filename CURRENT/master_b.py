@@ -11,7 +11,7 @@ from rpyc.utils.server import ThreadedServer
 
 # This function basically stores the state of the master and its mapping to a local file when interrupted
 
-# when signal is received for keyboard cancel, this function runs to save 
+# when signal is received for keyboard cancel, this function runs to save
 # TODO: create a backup server to integrate with this
 def int_handler(signal, frame):
     content = MasterService.exposed_Master.file_table
@@ -43,21 +43,21 @@ def set_conf():
     # Attempt to connect to a primary master server if it is running (NOT IMPLEMENTED FOR NOW)
     try:
         con = rpyc.connect("127.0.0.1", port=8100)
-        print(" ----- Connected to Primary back-up Server ------")
+        print(" ----- Connected to Shadow Master ------")
         back_up_server = con.root.BackUpServer()
         file_table_backup = back_up_server.getFileTable()
         MasterService.exposed_Master.file_table = json.loads(file_table_backup)
         con.close()
     except:
-        print("\n -----Info: Primary backup Server not found !!! ------- ")
-        print(" -----Start the primary_backup_server ------- \n \n ")
+        print("\n -----Info: Shadow Master not found !!! ------- ")
+        print(" -----Start the Shadow Master ------- \n \n ")
 
 
 class MasterService(rpyc.Service):
     class exposed_Master():
         file_table = {}
         chunkServers = {}
-        
+
         block_size = 0
 
         def exposed_read(self, fname):
