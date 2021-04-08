@@ -39,7 +39,7 @@ def read_from_chunkServer(block_uuid, chunkServer):
         print("\n----Chunk Server not found -------")
         print("client: read_from_chunkServer")
         print("----Start Chunks.py then try again ------ \n \n ")
-        sys.exit(1)
+        return False
 
     return chunkServer.get(block_uuid)
 
@@ -72,10 +72,20 @@ def get(master, fname):
             data = read_from_chunkServer(block[0], m)
             if data:
                 # sys.stdout.write(data)
+                print("Found in Primary")
                 full_data += data
                 break
             else:
-                print("Err: Block file missed ")
+                print("Err: Primary not responding")
+                for n in [master.get_chunkReplicas()[_] for _ in block[2]]:
+                    data = read_from_chunkServer(block[0], n)
+                    if data:
+                        # sys.stdout.write(data)
+                        full_data += data
+                        print("Found in Secondary")
+                        break
+                    else:
+                        print("Err: Secondaries also not responding")
     return full_data
 
 
@@ -201,6 +211,7 @@ def main(args):
                 # client.read(file_name)
                 data = get(master, file_name)
                 print(data)
+
 
             elif request == "append" or request == "a":
                 dest = input("FILE NAME: ")
