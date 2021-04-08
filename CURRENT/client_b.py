@@ -158,15 +158,19 @@ def list_files(master):
     files = master.get_list_of_files()
     print(files)
 
-
-def main(args):
+def connect_to_master():
     try:
         con = rpyc.connect("localhost", port=2131)
         master = con.root.Master()
+        return master
     except:
         print("Master Server not found ")
         print("launch Master Server and try again")
         return
+
+
+def main(args):
+    master = connect_to_master()
 
     while True:
         try:
@@ -193,7 +197,8 @@ def main(args):
             elif request == "read" or request == "r":
                 file_name = input("DFS FILE NAME: ")
                 # client.read(file_name)
-                get(master, file_name)
+                data = get(master, file_name)
+                print(data)
 
             elif request == "append" or request == "a":
                 dest = input("FILE NAME: ")
@@ -205,11 +210,23 @@ def main(args):
                 file_name = input("DFS FILE NAME: ")
                 # client.delete(file_name)
                 delete(master, file_name)
+            elif request == "reset":
+                new_master = connect_to_master()
+                if new_master is not None:
+                    print("Client has reset")
+                else:
+                    print("Unable to reset client")
             else:
                 print("Invalid action entered! Try again.")
 
         except Exception as e:
             print(e)
+            if isinstance(e, EOFError):
+                print("Reconnecting to master")
+                new_master = connect_to_master()
+                if new_master is not None:
+                    master = new_master
+                    print("RECONNECTED!")
 
     # if len(args) == 0:
     #     print "------ Help on Usage -------"
@@ -219,14 +236,14 @@ def main(args):
     #     print "To overwite: Client.py put Destination/to/the/src/file Name_of_the_file_in_the_GFS"
     #     return
 
-    if args[0] == "get":
-        get(master, args[1])
-    elif args[0] == "put":
-        put(master, args[1], args[2])
-    elif args[0] == "delete":
-        delete(master, args[1])
-    elif args[0] == "list":
-        list_files(master)
+    # if args[0] == "get":
+    #     get(master, args[1])
+    # elif args[0] == "put":
+    #     put(master, args[1], args[2])
+    # elif args[0] == "delete":
+    #     delete(master, args[1])
+    # elif args[0] == "list":
+    #     list_files(master)
     # else:
     #   print "Incorrect command \n"
     #   print "------ Help on Usage -------"
