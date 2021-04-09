@@ -17,6 +17,9 @@ def int_handler(signal, frame):
 
     sys.exit(0)
 
+def read(fname):
+    mapping = PrimaryBackUpService.exposed_BackUpServer.file_table[fname]
+    return mapping
 
 def loadFromFile():
     if os.path.isfile(file_name):
@@ -42,6 +45,6 @@ if __name__ == "__main__":
     port = 8100 # master is told to connect to this number in master_b.py
     loadFromFile()
     signal.signal(signal.SIGINT, int_handler)
-    print("Primary BackUp Server is running on port", port)
+    print("Shadow Master is running on port", port)
     t = ThreadedServer(PrimaryBackUpService, port=port)
     t.start()

@@ -10,7 +10,7 @@ def send_to_chunkServer(block_uuid, data, chunkServers, chunkReplicas):
         print("sending: " + str(block_uuid) + str(chunkServers))
         print("before chunkServers:", chunkServers)
     chunkServer = chunkServers[0]
-    # so far we think this will always be empty, should return multiple chunkServers when we implement replication 
+    # so far we think this will always be empty, should return multiple chunkServers when we implement replication
     # edit: probably dont need this alr, since it's change to chunkReplicas
     chunkServers = chunkServers[1:]
 
@@ -173,16 +173,20 @@ def list_files(master):
 
 def connect_to_master():
     try:
-        con = rpyc.connect("localhost", port=2131)
+        con = rpyc.connect("127.0.0.1", port=2131)
         master = con.root.Master()
+        print("Connected to master")
+        return master
     except:
-        print("Master Server not found ")
-        print("launch Master Server and try again")
+        print("Master Server not found: launch Master Server and try again")
         return
 
 
 def main(args):
+    print("Starting client...")
     master = connect_to_master()
+    print("after connection")
+
 
     while True:
         try:
@@ -240,6 +244,10 @@ def main(args):
                 if new_master is not None:
                     master = new_master
                     print("RECONNECTED!")
+                else:
+                    if request == "read" or "r":
+
+                        print("trying to read from shadow master")
 
     # if len(args) == 0:
     #     print "------ Help on Usage -------"
