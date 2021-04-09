@@ -5,12 +5,12 @@ import os
 debug_Mode = False
 
 
-def send_to_chunkServer(block_uuid, data, chunkServers, chunkReplicas):
+def send_to_chunkServer(block_uuid, data, chunkServers):
     if debug_Mode:
         print("sending: " + str(block_uuid) + str(chunkServers))
         print("before chunkServers:", chunkServers)
     chunkServer = chunkServers[0]
-    # so far we think this will always be empty, should return multiple chunkServers when we implement replication 
+    # so far we think this will always be empty, should return multiple chunkServers when we implement replication
     # edit: probably dont need this alr, since it's change to chunkReplicas
     chunkServers = chunkServers[1:]
 
@@ -21,7 +21,7 @@ def send_to_chunkServer(block_uuid, data, chunkServers, chunkReplicas):
     try:
         con = rpyc.connect(host, port=port)
         chunkServer = con.root.Chunks()
-        chunkServer.put(block_uuid, data, chunkReplicas)
+        chunkServer.put(block_uuid, data)
     except Exception as e:
         print("\n----Chunk Server not found -------"+str(host)+":"+str(port))
         print("client: send_to_chunkServer")
@@ -75,17 +75,17 @@ def get(master, fname):
                 print("Found in Primary")
                 full_data += data
                 break
-            else:
-                print("Err: Primary not responding")
-                for n in [master.get_chunkReplicas()[_] for _ in block[2]]:
-                    data = read_from_chunkServer(block[0], n)
-                    if data:
-                        # sys.stdout.write(data)
-                        full_data += data
-                        print("Found in Secondary")
-                        break
-                    else:
-                        print("Err: Secondaries also not responding")
+            # else:
+            #     print("Err: Primary not responding")
+            #     for n in [master.get_chunkReplicas()[_] for _ in block[2]]:
+            #         data = read_from_chunkServer(block[0], n)
+            #         if data:
+            #             # sys.stdout.write(data)
+            #             full_data += data
+            #             print("Found in Secondary")
+            #             break
+            #         else:
+            #             print("Err: Secondaries also not responding")
     return full_data
 
 
@@ -110,9 +110,9 @@ def write_b(master, b, data):
     block_uuid = b[0]  # b[0] is the unique ID of each block
     # getting chunkserver details for the block
     chunkServers = [master.get_chunkServers()[_] for _ in b[1]]
-    chunkReplicas = [master.get_chunkReplicas()[_] for _ in b[2]]
+    # chunkReplicas = [master.get_chunkReplicas()[_] for _ in b[2]]
 
-    send_to_chunkServer(block_uuid, data, chunkServers, chunkReplicas)
+    send_to_chunkServer(block_uuid, data, chunkServers)
     if debug_Mode:
         print(data)
         print("put master.get_chunkServers:", master.get_chunkServers())
@@ -150,6 +150,7 @@ def create(master, string_data, dest):
     print("File is hosted across chunk servers successfully!")
     return True
 
+
 def write_append(master, string_data, dest):
     if master.get_file_table_entry(dest) == None:
         raise Exception("append error, file does not exist: "
@@ -170,6 +171,7 @@ def write_append(master, string_data, dest):
 def list_files(master):
     files = master.get_list_of_files()
     print(files)
+
 
 def connect_to_master():
     try:
@@ -212,7 +214,6 @@ def main(args):
                 # client.read(file_name)
                 data = get(master, file_name)
                 print(data)
-
 
             elif request == "append" or request == "a":
                 dest = input("FILE NAME: ")
