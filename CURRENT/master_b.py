@@ -31,11 +31,12 @@ def int_handler(signal, frame):
 def get_heartbeat(host, port):
     HEARTBEAT_INTERVAL = 5
     try:
-        print("Heartbeat to chunkserver: {}, {} successful".format(host, port))
         conn = rpyc.connect(host, port)
         # msg = conn.root.Chunks().get_heartbeat()
         # print(msg)
         conn.root.Chunks().get_heartbeat()
+        print("Heartbeat to chunkserver: {}, {} successful".format(host, port))
+
 
     except Exception as e:
         print("Heartbeat to chunkserver: {}, {} failed".format(host, port))
