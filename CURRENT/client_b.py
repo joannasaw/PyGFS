@@ -175,6 +175,7 @@ def connect_to_master():
     try:
         con = rpyc.connect("localhost", port=2131)
         master = con.root.Master()
+        return master
     except:
         print("Master Server not found ")
         print("launch Master Server and try again")
