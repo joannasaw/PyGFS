@@ -6,7 +6,7 @@ import rpyc
 import sys
 import os
 
-# Attempt connectiong with Master Server as a Client GUI
+# Attempt connection with Master Server as a Client GUI
 try:
     con = rpyc.connect("localhost", port=2131)
     master = con.root.Master()
@@ -18,6 +18,14 @@ except:
 # Displays the list of available filenames hosted on the server
 
 
+def clearDisplay():
+    txtarea.delete("1.0", "end")
+
+
+def clearFileEntry():
+    pathh.delete(0, 'end')
+
+
 def refreshAllFiles():
     for label in list(frame1.children.values()):
         label.destroy()
@@ -27,16 +35,15 @@ def refreshAllFiles():
     for i, each_file in enumerate(files):
         label = Button(frame1,
                        text=each_file,
-                       command=lambda file_name=each_file: fillPath(file_name)).pack(side=TOP, fill=BOTH)
+                       command=lambda file_name=each_file: readFile(file_name)).pack(side=TOP, fill=BOTH)
 
 
-def fillPath(file_name):
-    print(file_name)
-    pathh.delete(0, 'end')
-    pathh.insert(END, file_name)
+# def fillPath(file_name):
+#     print(file_name)
+#     pathh.delete(0, 'end')
+#     pathh.insert(END, file_name)
+
 # Opens local directory to import file into GUI for preview before upload
-
-
 def openFile():
     tf = filedialog.askopenfilename(
         initialdir="C:/Users/MainFrame/Desktop/",
@@ -53,25 +60,26 @@ def openFile():
     file_cont = tf.read()
     txtarea.delete("1.0", "end")
     txtarea.insert(END, file_cont)
+    txtarea.config(state=DISABLED)
     tf.close()
 
 
-def readFile():
-    file_name = pathh.get()
+def readFile(file_name):
     full_data = get(master, file_name)
-    print(full_data)
+    # print(full_data)
     txtarea.delete("1.0", "end")
     txtarea.insert(END, full_data)
 
 
 def uploadFile():
-    print(filename)
+    # print(filename)
     success = put(master, filename, filename)
 
     if success:
         messagebox.showinfo(
-            'Upload Success', "File successfully uplaoded to Server")
+            'Upload Success', "File successfully uploaded to Server")
         refreshAllFiles()
+        clearDisplay()
     else:
         messagebox.showinfo('Upload Fail', "Error uploading file to Server")
 
@@ -96,6 +104,7 @@ def deleteFile():
         messagebox.showinfo(
             'Delete Success', 'File Successfully deleted from Server')
         refreshAllFiles()
+        clearDisplay()
     else:
         messagebox.showinfo(
             'Delete Failure', 'Error deleting file from Server')
@@ -110,6 +119,7 @@ def createFile():
         messagebox.showinfo(
             'Create Success', 'File successfully created on Server')
         refreshAllFiles()
+        clearDisplay()
     else:
         notice.config(text="Error creating file on Server")
 
@@ -122,6 +132,7 @@ def appendFile():
     if success:
         messagebox.showinfo('Append Success', 'Successfully Appended to File')
         refreshAllFiles()
+        clearDisplay()
     else:
         messagebox.showinfo('Append Failure', 'Error Appending to File')
 
@@ -139,11 +150,11 @@ frame1 = Frame(frame, width=100)
 frame1.pack(expand=True, fill='x', side=LEFT)
 
 # adding scrollbars
-ver_sb = Scrollbar(frame, orient=VERTICAL)
-ver_sb.pack(side=RIGHT, fill=BOTH)
+# ver_sb = Scrollbar(frame, orient=VERTICAL)
+# ver_sb.pack(side=RIGHT, fill=BOTH)
 
-hor_sb = Scrollbar(frame, orient=HORIZONTAL)
-hor_sb.pack(side=BOTTOM, fill=BOTH)
+# hor_sb = Scrollbar(frame, orient=HORIZONTAL)
+# hor_sb.pack(side=BOTTOM, fill=BOTH)
 
 
 # adding writing space
@@ -151,11 +162,11 @@ txtarea = Text(frame, width=60, height=20)
 txtarea.pack(side=LEFT)
 
 # binding scrollbar with text area
-txtarea.config(yscrollcommand=ver_sb.set)
-ver_sb.config(command=txtarea.yview)
+# txtarea.config(yscrollcommand=ver_sb.set)
+# ver_sb.config(command=txtarea.yview)
 
-txtarea.config(xscrollcommand=hor_sb.set)
-hor_sb.config(command=txtarea.xview)
+# txtarea.config(xscrollcommand=hor_sb.set)
+# hor_sb.config(command=txtarea.xview)
 
 # adding path showing box
 pathh = Entry(ws)
