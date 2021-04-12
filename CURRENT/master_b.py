@@ -40,7 +40,7 @@ def get_heartbeat(host, port):
 
     except Exception as e:
         print("Heartbeat to chunkserver: {}, {} failed".format(host, port))
-        
+
     heartbeat_timer = Timer(HEARTBEAT_INTERVAL, get_heartbeat, args=[host,port])
     heartbeat_timer.start()
 
@@ -48,30 +48,32 @@ class MasterService(rpyc.Service):
     class exposed_Master():
         print("start")
         file_table = {}
-        chunkServers = {}
-        chunkReplicas = {}
-        
+        # chunkServers = {}
+        # chunkReplicas = {}
+        allChunkServers = {} #e.g. {"1":("127.0.0.1","8888"), "2":("127.0.0.1","8887")}
+        primary_secondary_table = {}    # primary_secondary_table[primary_id] = [secondary_id_1, secondary_id_2]
+                                        # e.g. {"1":["2","4"], "5":["3","6"]}
+
         # Retrieve IP address information in GFS config for Chunkservers
         conf = configparser.ConfigParser()
         conf.read_file(open('GFS.conf'))
         block_size = int(conf.get('master', 'block_size'))
-        num_replica = int(conf.get('master', 'num_replica'))
-        chunkServers_conf = conf.get('master', 'chunkServers').split(',')
-        chunkReplicas_conf = conf.get('master','chunkReplicas').split(',')
-        
-        for m in chunkServers_conf:
+        num_primary = int(conf.get('master', 'num_primary'))
+        allChunkServers_conf = conf.get('master', 'chunkServers').split(',')
+
+        for m in allChunkServers_conf:
             id, host, port = m.split(":")
             # print("set_conf in master:", str(id))
-            chunkServers[id] = (host, port)  # set up chunkserver mappings
+            allChunkServers[id] = (host, port)  # set up all chunkserver mappings
 
-        for m in chunkReplicas_conf:
-            id, host, port = m.split(":")
-            # print("set_conf in master:", str(id))
-            chunkReplicas[id] = (host, port)  # set up chunkserver's replicas mappings
+        #TODO: choose primary and secondary and update primary_secondary_table
+        # NOTE: len(primary_secondary_table) =  num_primary
+        # hard code (to be removed)
+        primary_secondary_table {"1":["2","4"], "5":["3","6"]}
 
-        # Check if NUMBER OF REPLICATIONS IS HIGHER THAN NUMBER OF CHUNKSERVERS
-        if num_replica > (len(chunkServers)+len(chunkReplicas))/len(chunkServers) :
-            print("WARNING: NUMBER OF REPLICATIONS IS HIGHER THAN NUMBER OF CHUNKSERVERS")
+        # # Check if NUMBER OF REPLICATIONS IS HIGHER THAN NUMBER OF CHUNKSERVERS
+        # if num_replica > (len(chunkServers)+len(chunkReplicas))/len(chunkServers) :
+        #     print("WARNING: NUMBER OF REPLICATIONS IS HIGHER THAN NUMBER OF CHUNKSERVERS")
 
         # Attempt to connect to a primary master server if it is running (NOT IMPLEMENTED FOR NOW)
         try:
