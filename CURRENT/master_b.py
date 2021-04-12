@@ -35,8 +35,8 @@ def get_heartbeat(host, port):
         # msg = conn.root.Chunks().get_heartbeat()
         # print(msg)
         conn.root.Chunks().get_heartbeat()
-        print("Heartbeat to chunkserver: {}, {} successful".format(host, port))
-
+        # print("Heartbeat to chunkserver: {}, {} successful".format(host, port))
+        # conn.close()
 
     except Exception as e:
         print("Heartbeat to chunkserver: {}, {} failed".format(host, port))
@@ -69,7 +69,7 @@ class MasterService(rpyc.Service):
         #TODO: choose primary and secondary and update primary_secondary_table
         # NOTE: len(primary_secondary_table) =  num_primary
         # hard code (to be removed)
-        primary_secondary_table {"1":["2","4"], "5":["3","6"]}
+        primary_secondary_table = {"1":["2","4"], "5":["3","6"]}
 
         # Initialise primaryServers
         # NOTE: primaryServers should be updated every time a new primary is chosen
@@ -85,7 +85,7 @@ class MasterService(rpyc.Service):
             back_up_server = con.root.BackUpServer()
             file_table_backup = back_up_server.getFileTable()
             file_table = json.loads(file_table_backup)
-            con.close()
+            # con.close()
         except:
             print("\n -----Info: Shadow Master not found !!! ------- ")
             print(" -----Start the Shadow Master ------- \n \n ")
@@ -149,14 +149,14 @@ class MasterService(rpyc.Service):
 
         def exposed_get_primaryServers(self):
             primaryServers = {}
-            for primary_id in self.__class__.primary_secondary_table:
-                primaryServers[primary_id] = self.__class__.allChunkServers
+            for primary_id in list(self.__class__.primary_secondary_table.keys()):
+                primaryServers[primary_id] = self.__class__.allChunkServers[primary_id]
             return primaryServers
 
         def exposed_get_secondaryServers(self, primary_id):
             secondaryServers = {}
             for secondary_id in self.__class__.primary_secondary_table[primary_id]:
-                secondaryServers[secondary_id] = self.__class__.allChunkServers
+                secondaryServers[secondary_id] = self.__class__.allChunkServers[secondary_id]
             return secondaryServers
 
 
@@ -183,14 +183,21 @@ class MasterService(rpyc.Service):
                 block_uuid = uuid.uuid1()
                 block_uuid = str(block_uuid)
                 # Master is randomly assigning Chunkservers to each block
-                nodes_id = random.choice(list(self.__class__.chunkServers.keys()))
-                replicas_ids = []
-                for i in range(self.__class__.num_replica-1):
-                    replicas_ids.append(str(nodes_id)+"."+str(i+1))
-                blocks.append((block_uuid, nodes_id, replicas_ids))
+                primaryServers = {}
+                for primary_id in self.__class__.primary_secondary_table:
+                    primaryServers[primary_id] = self.__class__.allChunkServers
+                primary_id = random.choice(list(primaryServers.keys()))
+                print("primary_id:", primary_id)
+                secondaryServers = {}
+                for secondary_id in self.__class__.primary_secondary_table[primary_id]:
+                    secondaryServers[secondary_id] = self.__class__.allChunkServers
+                secondary_ids = list(secondaryServers.keys())
+                # for i in range(self.__class__.num_replica-1):
+                #     replicas_ids.append(str(nodes_id)+"."+str(i+1))
+                blocks.append((block_uuid, primary_id, secondary_ids))
 
                 # append block_id , Chunk_server_id, Chunk_server's replicas_ids, index_of_block
-                self.__class__.file_table[dest].append((block_uuid, nodes_id, replicas_ids, i))
+                self.__class__.file_table[dest].append((block_uuid, primary_id, secondary_ids, i))
 
             return blocks
 
@@ -200,7 +207,7 @@ class MasterService(rpyc.Service):
                 block_uuid = uuid.uuid1()
                 block_uuid = str(block_uuid)
                 # Master is randomly assigning Chunkservers to each block
-                nodes_id = random.choice(list(self.__class__.chunkServers.keys()))
+                nodes_id = random.choice(list(self.exposed_get_primaryServers().keys())) #TODO
                 blocks.append((block_uuid, nodes_id))
 
             return blocks
@@ -217,6 +224,7 @@ if __name__ == "__main__":
     # signal.signal(): Allows defining custom handlers to be executed when a signal is received
     # signal.SIGINT: allows keyboard interrupt
     signal.signal(signal.SIGINT, int_handler)
-    print("Master server running on port", port)
+
     t = ThreadedServer(MasterService, port=port)
+    print("Master server running on port", t.port)
     t.start()

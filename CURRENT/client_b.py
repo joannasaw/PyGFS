@@ -2,26 +2,18 @@ import rpyc
 import sys
 import os
 
-debug_Mode = False
+debug_Mode = True
 
 
-def send_to_chunkServer(block_uuid, data, chunkServers, chunkReplicas):
+def send_to_chunkServer(block_uuid, data, primaryServer, secondaryServers):
     if debug_Mode:
-        print("sending: " + str(block_uuid) + str(chunkServers))
-        print("before chunkServers:", chunkServers)
-    chunkServer = chunkServers[0]
-    # so far we think this will always be empty, should return multiple chunkServers when we implement replication
-    # edit: probably dont need this alr, since it's change to chunkReplicas
-    chunkServers = chunkServers[1:]
-
-    if debug_Mode:
-        print("after chunkServer", chunkServer)
-        print("after chunkServers:", chunkServers)
-    host, port = chunkServer
+        print("send_to_chunksServer primaryServer:", primaryServer)
+        print("send_to_chunksServer secondaryServers:", secondaryServers)
+    host, port = primaryServer
     try:
         con = rpyc.connect(host, port=port)
-        chunkServer = con.root.Chunks()
-        chunkServer.put(block_uuid, data, chunkReplicas)
+        primaryService = con.root.Chunks()
+        primaryService.put(block_uuid, data, secondaryServers)
     except Exception as e:
         print("\n----Chunk Server not found -------"+str(host)+":"+str(port))
         print("client: send_to_chunkServer")
@@ -77,7 +69,7 @@ def get(master, fname):
                 break
             else:
                 print("Err: Primary not responding")
-                for n in [master.get_secondaryServers()[_] for _ in block[2]]:
+                for n in [master.get_secondaryServers(block[1])[_] for _ in block[2]]:
                     data = read_from_chunkServer(block[0], n)
                     if data:
                         # sys.stdout.write(data)
@@ -109,17 +101,12 @@ def delete(master, fname):
 def write_b(master, b, data):
     block_uuid = b[0]  # b[0] is the unique ID of each block
     # getting chunkserver details for the block
-    chunkServers = [master.get_primaryServers()[_] for _ in b[1]]
-    chunkReplicas = [master.get_secondaryServers()[_] for _ in b[2]] # TODO: handling of secondary
+    primaryServer = [master.get_primaryServers()[_] for _ in b[1]][0]
+    secondaryServers = [master.get_secondaryServers(b[1])[_] for _ in b[2]]
 
-    send_to_chunkServer(block_uuid, data, chunkServers, chunkReplicas)
+    send_to_chunkServer(block_uuid, data, primaryServer, secondaryServers)
     if debug_Mode:
-        print(data)
-        print("put master.get_chunkServers:", master.get_chunkServers())
-        print("put b:", b)
-        print("put b[1]:", b[1])
-        print("put chunkServers:", chunkServers)
-
+        print("write_b data:", data)
 
 def put(master, source, dest):  # will overwrite existing file with same name/dest
     size = os.path.getsize(source)  # returns the size of file in integer
@@ -174,10 +161,13 @@ def list_files(master):
 def connect_to_master():
     try:
         con = rpyc.connect("127.0.0.1", port=2131)
+        print(con)
+        print(con.root)
         master = con.root.Master()
         print("Connected to master")
         return master
-    except:
+    except Exception as e:
+        print(e)
         print("Master Server not found: launch Master Server and try again")
         return
 
