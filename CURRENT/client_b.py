@@ -68,7 +68,7 @@ def get(master, fname):
     for block in file_table:
         if debug_Mode:
             print(block)
-        for m in [master.get_chunkServers()[_] for _ in block[1]]:
+        for m in [master.get_primaryServers()[_] for _ in block[1]]:
             data = read_from_chunkServer(block[0], m)
             if data:
                 # sys.stdout.write(data)
@@ -77,7 +77,7 @@ def get(master, fname):
                 break
             else:
                 print("Err: Primary not responding")
-                for n in [master.get_chunkReplicas()[_] for _ in block[2]]:
+                for n in [master.get_secondaryServers()[_] for _ in block[2]]:
                     data = read_from_chunkServer(block[0], n)
                     if data:
                         # sys.stdout.write(data)
@@ -97,7 +97,7 @@ def delete(master, fname):
     print("File entry deleted from Master server table")
 
     for block in file_table:
-        for m in [master.get_chunkServers()[_] for _ in block[1]]:
+        for m in [master.get_primaryServers()[_] for _ in block[1]]:
             condition = delete_from_chunks(block[0], m)
             if not condition:
                 print("Error: File not found in chunk servers")
@@ -109,8 +109,8 @@ def delete(master, fname):
 def write_b(master, b, data):
     block_uuid = b[0]  # b[0] is the unique ID of each block
     # getting chunkserver details for the block
-    chunkServers = [master.get_chunkServers()[_] for _ in b[1]]
-    chunkReplicas = [master.get_chunkReplicas()[_] for _ in b[2]]
+    chunkServers = [master.get_primaryServers()[_] for _ in b[1]]
+    chunkReplicas = [master.get_secondaryServers()[_] for _ in b[2]] # TODO: handling of secondary
 
     send_to_chunkServer(block_uuid, data, chunkServers, chunkReplicas)
     if debug_Mode:

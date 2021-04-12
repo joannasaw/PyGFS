@@ -30,6 +30,10 @@ class PrimaryBackUpService(rpyc.Service):
 
     class exposed_BackUpServer():
         file_table = {}
+        chunkServers = {}
+        chunkReplicas = {}
+
+        #TODO: no more hard code of primary and secondary
 
         def exposed_getFileTable(self):
             file_table_string = json.dumps(self.file_table)
@@ -39,6 +43,15 @@ class PrimaryBackUpService(rpyc.Service):
         def exposed_updateFileTable(self, __file_table__):
             self.__class__.file_table = json.loads(__file_table__)
             print("File table is updated")
+
+        ## master functions
+
+        def exposed_get_file_table_entry(self, fname):
+            # print("file_table in master:", self.__class__.file_table)
+            if fname in self.__class__.file_table:
+                return self.__class__.file_table[fname]
+            else:
+                return None
 
 
 if __name__ == "__main__":

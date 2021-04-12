@@ -71,6 +71,9 @@ class MasterService(rpyc.Service):
         # hard code (to be removed)
         primary_secondary_table {"1":["2","4"], "5":["3","6"]}
 
+        # Initialise primaryServers
+        # NOTE: primaryServers should be updated every time a new primary is chosen
+
         # # Check if NUMBER OF REPLICATIONS IS HIGHER THAN NUMBER OF CHUNKSERVERS
         # if num_replica > (len(chunkServers)+len(chunkReplicas))/len(chunkServers) :
         #     print("WARNING: NUMBER OF REPLICATIONS IS HIGHER THAN NUMBER OF CHUNKSERVERS")
@@ -87,14 +90,15 @@ class MasterService(rpyc.Service):
             print("\n -----Info: Shadow Master not found !!! ------- ")
             print(" -----Start the Shadow Master ------- \n \n ")
 
-        for chunkServer_idx in chunkServers:
-            host, port = chunkServers[chunkServer_idx]
+        for chunkServer_idx in allChunkServers:
+            host, port = allChunkServers[chunkServer_idx]
             get_heartbeat(host, port)
 
-        for chunkReplica_idx in chunkReplicas:
-            host, port = chunkReplicas[chunkReplica_idx]
-            get_heartbeat(host, port)
+        # for chunkReplica_idx in chunkReplicas: #UNNECESSARY, ALREADY HANDLED ABOVE
+        #     host, port = chunkReplicas[chunkReplica_idx]
+        #     get_heartbeat(host, port)
 
+######### MASTER FUNCTIONS #########
         def exposed_read(self, fname):
             mapping = self.__class__.file_table[fname]
             return mapping
@@ -140,16 +144,32 @@ class MasterService(rpyc.Service):
         def exposed_get_block_size(self):
             return self.__class__.block_size
 
-        def exposed_get_num_replica(self):
-            return self.__class__.num_replica
+        def exposed_get_num_primary(self):
+            return self.__class__.num_primary
 
-        def exposed_get_chunkServers(self):
-            #print("master get_chunkServers:", self.__class__.chunkServers)
-            return self.__class__.chunkServers
+        def exposed_get_primaryServers(self):
+            primaryServers = {}
+            for primary_id in self.__class__.primary_secondary_table:
+                primaryServers[primary_id] = self.__class__.allChunkServers
+            return primaryServers
 
-        def exposed_get_chunkReplicas(self):
-            #print("master get_chunkReplicas:", self.__class__.chunkReplicas)
-            return self.__class__.chunkReplicas
+        def exposed_get_secondaryServers(self, primary_id):
+            secondaryServers = {}
+            for secondary_id in self.__class__.primary_secondary_table[primary_id]:
+                secondaryServers[secondary_id] = self.__class__.allChunkServers
+            return secondaryServers
+
+
+        # def exposed_get_num_replica(self):
+        #     return self.__class__.num_replica
+        #
+        # def exposed_get_chunkServers(self):
+        #     #print("master get_chunkServers:", self.__class__.chunkServers)
+        #     return self.__class__.chunkServers
+        #
+        # def exposed_get_chunkReplicas(self):
+        #     #print("master get_chunkReplicas:", self.__class__.chunkReplicas)
+        #     return self.__class__.chunkReplicas
 
         def calc_num_blocks(self, size):
             return int(math.ceil(float(size) / self.__class__.block_size))
