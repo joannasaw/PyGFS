@@ -193,7 +193,7 @@ frame.pack(pady=20, padx=20,)
 txtlabel = Label(frame, text="File content")
 txtlabel.pack(side=TOP)
 
-frame1 = Frame(frame, width=100, borderwidth=3, relief=RAISED)
+frame1 = Frame(frame, width=100, borderwidth=1,)
 frame1.pack(side=LEFT, fill=Y)
 Button(
     frame1,
@@ -204,6 +204,7 @@ Button(
 # adding display space
 txtarea = Text(frame, width=60, height=20)
 txtarea.pack(side=LEFT)
+txtarea.config(state=DISABLED)
 
 frame2 = Frame(ws)
 frame2.pack(fill=X, ipady=10)
