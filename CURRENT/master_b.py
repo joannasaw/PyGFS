@@ -9,6 +9,7 @@ import json
 from pprint import pprint
 from rpyc.utils.server import ThreadedServer
 from threading import Timer
+import copy
 
 # This function basically stores the state of the master and its mapping to a local file when interrupted
 
@@ -44,6 +45,13 @@ def get_heartbeat(host, port):
     heartbeat_timer = Timer(HEARTBEAT_INTERVAL, get_heartbeat, args=[host,port])
     heartbeat_timer.start()
 
+def split_list(a_list, no_of_parts):
+    length = len(a_list)
+    if no_of_parts > length:
+        raise ValueError("Number of primaries specified exceeds secondaries available!")
+    return [a_list[i*length // no_of_parts: (i+1)*length // no_of_parts] 
+             for i in range(no_of_parts) ]
+
 class MasterService(rpyc.Service):
     class exposed_Master():
         print("start")
@@ -61,18 +69,25 @@ class MasterService(rpyc.Service):
         num_primary = int(conf.get('master', 'num_primary'))
         allChunkServers_conf = conf.get('master', 'chunkServers').split(',')
 
+        # Initialise primaryServers and seondaryServers through leasing
+        # NOTE: primaryServers should be updated every time a new primary is chosen
+        print("--------------------- Leasing to Primary Chunkservers ---------------------")
         for m in allChunkServers_conf:
             id, host, port = m.split(":")
             # print("set_conf in master:", str(id))
             allChunkServers[id] = (host, port)  # set up all chunkserver mappings
 
-        #TODO: choose primary and secondary and update primary_secondary_table
-        # NOTE: len(primary_secondary_table) =  num_primary
-        # hard code (to be removed)
-        primary_secondary_table = {"1":["2","4"], "5":["3","6"]}
+        primary_idxs = random.sample(list(allChunkServers.keys()), num_primary)
+        secondary_chunkservers = copy.deepcopy(allChunkServers)
+        for idx in primary_idxs:
+            del secondary_chunkservers[idx]
 
-        # Initialise primaryServers
-        # NOTE: primaryServers should be updated every time a new primary is chosen
+        sec_chunkserver_grps = split_list(list(secondary_chunkservers.keys()), num_primary)
+        for primary_idx, sec_chunkserver_grp in zip(primary_idxs, sec_chunkserver_grps):
+            primary_secondary_table[primary_idx] = sec_chunkserver_grp
+        print(primary_secondary_table)
+        print("---- Leasing completed. Pri to Sec mapping: {} ----".format(primary_secondary_table))
+        
 
         # # Check if NUMBER OF REPLICATIONS IS HIGHER THAN NUMBER OF CHUNKSERVERS
         # if num_replica > (len(chunkServers)+len(chunkReplicas))/len(chunkServers) :
@@ -93,10 +108,6 @@ class MasterService(rpyc.Service):
         for chunkServer_idx in allChunkServers:
             host, port = allChunkServers[chunkServer_idx]
             get_heartbeat(host, port)
-
-        # for chunkReplica_idx in chunkReplicas: #UNNECESSARY, ALREADY HANDLED ABOVE
-        #     host, port = chunkReplicas[chunkReplica_idx]
-        #     get_heartbeat(host, port)
 
 ######### MASTER FUNCTIONS #########
         def exposed_read(self, fname):
