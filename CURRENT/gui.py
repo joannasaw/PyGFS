@@ -149,7 +149,8 @@ def createFile():
     file_name = filenameEntry.get()
     if len(str(file_name)) == 0:
         messagebox.showinfo('Error', "Please enter filename")
-    file_content = txtarea.get("1.0", END)
+    file_content = str(contentEntry.get())
+    print(file_content)
     if len(str(file_content)) == 0:
         messagebox.showinfo('Error', "Please enter content of file")
     success = create(master, file_content, file_name)
