@@ -2,7 +2,7 @@ import rpyc
 import sys
 import os
 
-debug_Mode = True
+debug_Mode = False
 
 
 def send_to_chunkServer(block_uuid, data, primaryServer, secondaryServers):
@@ -161,8 +161,6 @@ def list_files(master):
 def connect_to_master():
     try:
         con = rpyc.connect("127.0.0.1", port=2131)
-        print(con)
-        print(con.root)
         master = con.root.Master()
         print("Connected to master")
         return master
@@ -171,60 +169,88 @@ def connect_to_master():
         print("Master Server not found: launch Master Server and try again")
         return
 
+def connect_to_shadow():
+    try:
+        con = rpyc.connect("127.0.0.1", port=8100)
+        master = con.root.BackUpServer()
+        print("Connected to shadow")
+        return master
+    except Exception as e:
+        print(e)
+        print("Shadow Master Server not found: launch Shadow Master Server and try again")
+        return
+
+
 
 def main(args):
     print("Starting client...")
-    master = connect_to_master()
-    print("after connection")
 
 
     while True:
         try:
-            request = input(
-                "\nTYPE 'list', 'upload', 'create', 'read', 'append' or 'delete': (l/u/c/r/a/d) ")
+            master = connect_to_master()
+            if master is not None:
+                request = input(
+                    "\nTYPE 'list', 'upload', 'create', 'read', 'append' or 'delete': (l/u/c/r/a/d) ")
 
-            if request == "list" or request == "l":
-                list_files(master)
+                if request == "list" or request == "l":
+                    list_files(master)
 
-            elif request == "upload" or request == "u":
-                original_file_name = input("SOURCE FILE NAME: ")
-                dest = input("DFS FILE NAME: ")
-                # client.write(file_name, content)
-                # TODO: currently uploads an existing file, what about creating a new file?
-                put(master, original_file_name, dest)
+                elif request == "upload" or request == "u":
+                    original_file_name = input("SOURCE FILE NAME: ")
+                    dest = input("DFS FILE NAME: ")
+                    # client.write(file_name, content)
+                    # TODO: currently uploads an existing file, what about creating a new file?
+                    put(master, original_file_name, dest)
 
-            # write here is a function to create a new file + upload
-            elif request == "create" or request == "c":
-                dest = input("DFS FILE NAME: ")
-                data = input("CONTENT:")
-                # client.write(file_name, content)
-                create(master, data, dest)
+                # write here is a function to create a new file + upload
+                elif request == "create" or request == "c":
+                    dest = input("DFS FILE NAME: ")
+                    data = input("CONTENT:")
+                    # client.write(file_name, content)
+                    create(master, data, dest)
 
-            elif request == "read" or request == "r":
-                file_name = input("DFS FILE NAME: ")
-                # client.read(file_name)
-                data = get(master, file_name)
-                print(data)
+                elif request == "read" or request == "r":
+                    file_name = input("DFS FILE NAME: ")
+                    # client.read(file_name)
+                    data = get(master, file_name)
+                    print(data)
 
 
-            elif request == "append" or request == "a":
-                dest = input("FILE NAME: ")
-                data = input("APPEND: ")
-                # client.write_append(file_name, content)
-                write_append(master, data, dest)
+                elif request == "append" or request == "a":
+                    dest = input("FILE NAME: ")
+                    data = input("APPEND: ")
+                    # client.write_append(file_name, content)
+                    write_append(master, data, dest)
 
-            elif request == "delete" or request == "d":
-                file_name = input("DFS FILE NAME: ")
-                # client.delete(file_name)
-                delete(master, file_name)
-            elif request == "reset":
-                new_master = connect_to_master()
-                if new_master is not None:
-                    print("Client has reset")
+                elif request == "delete" or request == "d":
+                    file_name = input("DFS FILE NAME: ")
+                    # client.delete(file_name)
+                    delete(master, file_name)
+                elif request == "reset":
+                    new_master = connect_to_master()
+                    if new_master is not None:
+                        print("Client has reset")
+                    else:
+                        print("Unable to reset client")
                 else:
-                    print("Unable to reset client")
+                    print("Invalid action entered! Try again.")
             else:
-                print("Invalid action entered! Try again.")
+                print("Unable to connect to Master, only READ and LIST operations allowed")
+                request = input(
+                    "\nTYPE 'list' or 'read': (l/r) ")
+                if request == "read" or request == "r":
+                    file_name = input("DFS FILE NAME: ")
+                    print("\nAttempting to read from shadow master")
+                    shadow_master = connect_to_shadow()
+                    if shadow_master is not None:
+                        data = get(shadow_master, file_name)
+                        print(data)
+                elif request == "list" or request == "l":
+                    print("\nAttempting to list from shadow master")
+                    shadow_master = connect_to_shadow()
+                    if shadow_master is not None:
+                        list_files(shadow_master)
 
         except Exception as e:
             print(e)
@@ -235,9 +261,40 @@ def main(args):
                     master = new_master
                     print("RECONNECTED!")
                 else:
-                    if request == "read" or "r":
+                    if request == "read" or request == "r":
+                        print("\nAttempting to read from shadow master")
+                        shadow_master = connect_to_shadow()
+                        if shadow_master is not None:
+                            data = get(shadow_master, file_name)
+                            print(data)
+                    elif request == "list" or request == "l":
+                        print("\nAttempting to list from shadow master")
+                        shadow_master = connect_to_shadow()
+                        if shadow_master is not None:
+                            list_files(shadow_master)
+    # while master is None:
+    #     try:
+            # print("Unable to connect to Master, only READ and LIST operations allowed")
+            # request = input(
+            #     "\nTYPE 'list' or 'read': (l/r) ")
+            # if request == "read" or request == "r":
+            #     file_name = input("DFS FILE NAME: ")
+            #     print("\nAttempting to read from shadow master")
+            #     shadow_master = connect_to_shadow()
+            #     if shadow_master is not None:
+            #         data = get(shadow_master, file_name)
+            #         print(data)
+            # elif request == "list" or request == "l":
+            #     print("\nAttempting to list from shadow master")
+            #     shadow_master = connect_to_shadow()
+            #     if shadow_master is not None:
+            #         list_files(shadow_master)
+    #     except Exception as e:
+    #         print(e)
+    #         print("Unable to use shadow master")
 
-                        print("trying to read from shadow master")
+
+
 
     # if len(args) == 0:
     #     print "------ Help on Usage -------"

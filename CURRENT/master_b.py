@@ -16,12 +16,20 @@ import copy
 # when signal is received for keyboard cancel, this function runs to save
 # TODO: create a backup server to integrate with this
 def int_handler(signal, frame):
-    content = MasterService.exposed_Master.file_table
+    file_table = MasterService.exposed_Master.file_table
+    allChunkServers = MasterService.exposed_Master.allChunkServers
+    primary_secondary_table = MasterService.exposed_Master.primary_secondary_table
     try:
         con = rpyc.connect("127.0.0.1", port=8100)
         back_up_server = con.root.BackUpServer()
-        file_table_string = json.dumps(content)
+
+        file_table_string = json.dumps(file_table)
         back_up_server.updateFileTable(file_table_string)
+        allChunkServers_string = json.dumps(allChunkServers)
+        back_up_server.updateAllChunkServers(allChunkServers_string)
+        primary_secondary_table_string = json.dumps(primary_secondary_table)
+        back_up_server.updatePrimarySecondaryTable(primary_secondary_table_string)
+
         con.close()
     except:
         print("\n -----Info: Primary backup Server not found !!! ------- ")

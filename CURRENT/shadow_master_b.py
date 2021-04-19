@@ -30,10 +30,10 @@ class PrimaryBackUpService(rpyc.Service):
 
     class exposed_BackUpServer():
         file_table = {}
-        chunkServers = {}
-        chunkReplicas = {}
+        allChunkServers = {} #e.g. {"1":("127.0.0.1","8888"), "2":("127.0.0.1","8887")}
+        primary_secondary_table = {}    # primary_secondary_table[primary_id] = [secondary_id_1, secondary_id_2]
+                                        # e.g. {"1":["2","4"], "5":["3","6"]}
 
-        #TODO: no more hard code of primary and secondary
 
         def exposed_getFileTable(self):
             file_table_string = json.dumps(self.file_table)
@@ -43,6 +43,12 @@ class PrimaryBackUpService(rpyc.Service):
         def exposed_updateFileTable(self, __file_table__):
             self.__class__.file_table = json.loads(__file_table__)
             print("File table is updated")
+        def exposed_updateAllChunkServers(self, __allChunkServers__):
+            self.__class__.allChunkServers = json.loads(__allChunkServers__)
+            print("allChunkServers is updated")
+        def exposed_updatePrimarySecondaryTable(self, __primary_secondary_table__):
+            self.__class__.primary_secondary_table = json.loads(__primary_secondary_table__)
+            print("primary_secondary_table is updated")
 
         ## master functions
 
@@ -52,6 +58,21 @@ class PrimaryBackUpService(rpyc.Service):
                 return self.__class__.file_table[fname]
             else:
                 return None
+
+        def exposed_get_list_of_files(self):
+            return list(self.__class__.file_table.keys())
+
+        def exposed_get_primaryServers(self):
+            primaryServers = {}
+            for primary_id in list(self.__class__.primary_secondary_table.keys()):
+                primaryServers[primary_id] = self.__class__.allChunkServers[primary_id]
+            return primaryServers
+
+        def exposed_get_secondaryServers(self, primary_id):
+            secondaryServers = {}
+            for secondary_id in self.__class__.primary_secondary_table[primary_id]:
+                secondaryServers[secondary_id] = self.__class__.allChunkServers[secondary_id]
+            return secondaryServers
 
 
 if __name__ == "__main__":
