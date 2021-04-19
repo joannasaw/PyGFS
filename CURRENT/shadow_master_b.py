@@ -39,6 +39,14 @@ class PrimaryBackUpService(rpyc.Service):
             file_table_string = json.dumps(self.file_table)
             print("File table requested by MasterServer")
             return file_table_string
+        def exposed_getAllChunkServers(self):
+            allChunkServers_string = json.dumps(self.allChunkServers)
+            print("allChunkServers requested by MasterServer")
+            return allChunkServers_string
+        def exposed_getPrimarySecondary(self):
+            primary_secondary_table_string = json.dumps(self.primary_secondary_table)
+            print("primary_secondary_table requested by MasterServer")
+            return primary_secondary_table_string
 
         def exposed_updateFileTable(self, __file_table__):
             self.__class__.file_table = json.loads(__file_table__)

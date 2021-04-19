@@ -78,6 +78,23 @@ class MasterService(rpyc.Service):
         primary_secondary_table = {}    # primary_secondary_table[primary_id] = [secondary_id_1, secondary_id_2]
                                         # e.g. {"1":["2","4"], "5":["3","6"]}
 
+        # Attempt to connect to a primary master server if it is running
+        try:
+            con = rpyc.connect("127.0.0.1", port=8100)
+            print(" ----- Connected to Shadow Master ------")
+            back_up_server = con.root.BackUpServer()
+            file_table_backup = back_up_server.getFileTable()
+            file_table = json.loads(file_table_backup)
+            allChunkServers_backup = back_up_server.getAllChunkServers()
+            allChunkServers = json.loads(allChunkServers_backup)
+            primary_secondary_table_backup = back_up_server.getPrimarySecondary()
+            primary_secondary_table = json.loads(primary_secondary_table_backup)
+            # con.close()
+        except:
+            print("\n -----Info: Shadow Master not found !!! ------- ")
+            print(" -----Start the Shadow Master ------- \n \n ")
+
+
         # Retrieve IP address information in GFS config for Chunkservers
         conf = configparser.ConfigParser()
         conf.read_file(open('GFS.conf'))
@@ -86,45 +103,36 @@ class MasterService(rpyc.Service):
         num_primary = int(conf.get('master', 'num_primary'))
         allChunkServers_conf = conf.get('master', 'chunkServers').split(',')
 
-        # Initialise primaryServers and seondaryServers through leasing
-        # NOTE: primaryServers should be updated every time a new primary is chosen
-        print("--------------------- Leasing to Primary Chunkservers ---------------------")
-        for m in allChunkServers_conf:
-            id, host, port = m.split(":")
-            # print("set_conf in master:", str(id))
-            allChunkServers[id] = (host, port)  # set up all chunkserver mappings
+        if allChunkServers == {}:
+            for m in allChunkServers_conf:
+                id, host, port = m.split(":")
+                # print("set_conf in master:", str(id))
+                allChunkServers[id] = (host, port)  # set up all chunkserver mappings
 
-        primary_idxs = random.sample(list(allChunkServers.keys()), num_primary)
-        secondary_chunkservers = copy.deepcopy(allChunkServers)
-        for idx in primary_idxs:
-            del secondary_chunkservers[idx]
+        if primary_secondary_table == {}:
+            # Initialise primaryServers and seondaryServers through leasing
+            # NOTE: primaryServers should be updated every time a new primary is chosen
+            print("--------------------- Leasing to Primary Chunkservers ---------------------")
+            primary_idxs = random.sample(list(allChunkServers.keys()), num_primary)
+            secondary_chunkservers = copy.deepcopy(allChunkServers)
+            for idx in primary_idxs:
+                del secondary_chunkservers[idx]
 
-        sec_chunkserver_grps = split_list(list(secondary_chunkservers.keys()), num_primary)
-        for primary_idx, sec_chunkserver_grp in zip(primary_idxs, sec_chunkserver_grps):
-            primary_secondary_table[primary_idx] = sec_chunkserver_grp
-        print(primary_secondary_table)
-        print("---- Leasing completed. Pri to Sec mapping: {} ----".format(primary_secondary_table))
+            sec_chunkserver_grps = split_list(list(secondary_chunkservers.keys()), num_primary)
+            for primary_idx, sec_chunkserver_grp in zip(primary_idxs, sec_chunkserver_grps):
+                primary_secondary_table[primary_idx] = sec_chunkserver_grp
+            print(primary_secondary_table)
+            print("---- Leasing completed. Pri to Sec mapping: {} ----".format(primary_secondary_table))
 
 
         # # Check if NUMBER OF REPLICATIONS IS HIGHER THAN NUMBER OF CHUNKSERVERS
         # if num_replica > (len(chunkServers)+len(chunkReplicas))/len(chunkServers) :
         #     print("WARNING: NUMBER OF REPLICATIONS IS HIGHER THAN NUMBER OF CHUNKSERVERS")
 
-        # Attempt to connect to a primary master server if it is running (NOT IMPLEMENTED FOR NOW)
-        try:
-            con = rpyc.connect("127.0.0.1", port=8100)
-            print(" ----- Connected to Shadow Master ------")
-            back_up_server = con.root.BackUpServer()
-            file_table_backup = back_up_server.getFileTable()
-            file_table = json.loads(file_table_backup)
-            # con.close()
-        except:
-            print("\n -----Info: Shadow Master not found !!! ------- ")
-            print(" -----Start the Shadow Master ------- \n \n ")
-
         for chunkServer_idx in allChunkServers:
             host, port = allChunkServers[chunkServer_idx]
             get_heartbeat(host, port)
+
 
 ######### MASTER FUNCTIONS #########
         def exposed_read(self, fname):

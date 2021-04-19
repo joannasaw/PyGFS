@@ -7,14 +7,29 @@ import sys
 import os
 
 # Attempt connection with Master Server as a Client GUI
-try:
-    con = rpyc.connect("localhost", port=2131)
-    master = con.root.Master()
-    print("Successfully connected to Master Server")
+def connect_to_master():
+    try:
+        con = rpyc.connect("127.0.0.1", port=2131)
+        master = con.root.Master()
+        print("Connected to master")
+        return master
+    except Exception as e:
+        print(e)
+        print("Master Server not found: launch Master Server and try again")
+        return
 
-except:
-    print("Master Server not found ")
-    print("launch Master Server and try again")
+def connect_to_shadow():
+    try:
+        con = rpyc.connect("127.0.0.1", port=8100)
+        master = con.root.BackUpServer()
+        print("Connected to shadow")
+        return master
+    except Exception as e:
+        print(e)
+        print("Shadow Master Server not found: launch Shadow Master Server and try again")
+        return
+
+
 # Displays the list of available filenames hosted on the server
 
 
@@ -33,25 +48,34 @@ def clearEditEntry():
 
 
 def refreshAllFiles():
-    for label in list(frame1.children.values()):
-        label.destroy()
+    master = connect_to_master()
+    if master is None:
+        master = connect_to_shadow()
 
-    global files
-    files = master.get_list_of_files()
-    for i, each_file in enumerate(files):
-        label = Button(frame1,
-                       text=os.path.splitext(each_file)[0],
-                       command=lambda file_name=each_file: readFile(file_name)).pack(side=TOP, fill=BOTH)
-    Button(
-        frame1,
-        text="Refresh",
-        command=refreshAllFiles,
-    ).pack(side=BOTTOM)
+    if master is not None:    
+        for label in list(frame1.children.values()):
+            label.destroy()
+
+        global files
+        files = master.get_list_of_files()
+        for i, each_file in enumerate(files):
+            label = Button(frame1,
+                        text=os.path.splitext(each_file)[0],
+                        command=lambda file_name=each_file: readFile(file_name)).pack(side=TOP, fill=BOTH)
+        Button(
+            frame1,
+            text="Refresh",
+            command=refreshAllFiles,
+        ).pack(side=BOTTOM)
+    else:
+        messagebox.showinfo('Error', "No master or shadow")
+    
 
 # Opens local directory to import file into GUI for preview before upload
 
 
 def openFile():
+    
     tf = filedialog.askopenfilename(
         initialdir="C:/Users/MainFrame/Desktop/",
         title="Open Text file",
@@ -75,44 +99,54 @@ def openFile():
 
 
 def readFile(file_name):
-    full_data = get(master, file_name)
-    # print(full_data)
-    txtarea.config(state=NORMAL)
-    txtarea.delete("1.0", "end")
-    txtarea.insert(END, full_data)
-    txtarea.config(state=DISABLED)
-    clearFileEntry()
-    filenameEntry.insert(0, file_name)
-    clearEditEntry()
+    master = connect_to_master()
+    if master is None:
+        master = connect_to_shadow()
+
+    if master is not None: 
+        full_data = get(master, file_name)
+        # print(full_data)
+        txtarea.config(state=NORMAL)
+        txtarea.delete("1.0", "end")
+        txtarea.insert(END, full_data)
+        txtarea.config(state=DISABLED)
+        clearFileEntry()
+        filenameEntry.insert(0, file_name)
+        clearEditEntry()
 
 
 def uploadFile():
-    print(filename)
-    file_name = filenameEntry.get()
-    file_content = txtarea.get("1.0", END)
-    if len(str(file_name)) == 0:
-        messagebox.showinfo('Error', "Please enter filename")
-    elif len(str(file_name)) > 20:
-        messagebox.showinfo(
-            'Error', "File name cannot exceed 20 characters")
-    elif file_name in list(files):
-        messagebox.showinfo(
-            'Error', "File name already exist on server!")
-    elif len(str(file_content)) == 0:
-        messagebox.showinfo('Error', "Please enter content of file")
-    else:
-        success = create(master, file_content, file_name)
+    master = connect_to_master()
+    if master is None:
+         messagebox.showinfo('Error', "Master not available, only read")
 
-        if success:
+    if master is not None: 
+        print(filename)
+        file_name = filenameEntry.get()
+        file_content = txtarea.get("1.0", END)
+        if len(str(file_name)) == 0:
+            messagebox.showinfo('Error', "Please enter filename")
+        elif len(str(file_name)) > 20:
             messagebox.showinfo(
-                'Upload Success', "File successfully uploaded to Server")
-            refreshAllFiles()
-            clearDisplay()
-            clearFileEntry()
-            clearEditEntry()
+                'Error', "File name cannot exceed 20 characters")
+        elif file_name in list(files):
+            messagebox.showinfo(
+                'Error', "File name already exist on server!")
+        elif len(str(file_content)) == 0:
+            messagebox.showinfo('Error', "Please enter content of file")
         else:
-            messagebox.showinfo(
-                'Upload Fail', "Error uploading file to Server")
+            success = create(master, file_content, file_name)
+
+            if success:
+                messagebox.showinfo(
+                    'Upload Success', "File successfully uploaded to Server")
+                refreshAllFiles()
+                clearDisplay()
+                clearFileEntry()
+                clearEditEntry()
+            else:
+                messagebox.showinfo(
+                    'Upload Fail', "Error uploading file to Server")
 
 
 def saveFile():
@@ -129,58 +163,73 @@ def saveFile():
 
 
 def deleteFile():
-    file_name = filenameEntry.get()
-    if len(str(file_name)) == 0:
-        messagebox.showinfo('Error', "Please enter filename")
-    success = delete(master, file_name)
-    if success:
-        messagebox.showinfo(
-            'Delete Success', 'File Successfully deleted from Server')
-        refreshAllFiles()
-        clearDisplay()
-        clearFileEntry()
-        clearEditEntry()
-    else:
-        messagebox.showinfo(
-            'Delete Failure', 'Error deleting file from Server')
+    master = connect_to_master()
+    if master is None:
+         messagebox.showinfo('Error', "Master not available, only read")
+
+    if master is not None: 
+        file_name = filenameEntry.get()
+        if len(str(file_name)) == 0:
+            messagebox.showinfo('Error', "Please enter filename")
+        success = delete(master, file_name)
+        if success:
+            messagebox.showinfo(
+                'Delete Success', 'File Successfully deleted from Server')
+            refreshAllFiles()
+            clearDisplay()
+            clearFileEntry()
+            clearEditEntry()
+        else:
+            messagebox.showinfo(
+                'Delete Failure', 'Error deleting file from Server')
 
 
 def createFile():
-    file_name = filenameEntry.get()
-    if len(str(file_name)) == 0:
-        messagebox.showinfo('Error', "Please enter filename")
-    file_content = str(contentEntry.get())
-    print(file_content)
-    if len(str(file_content)) == 0:
-        messagebox.showinfo('Error', "Please enter content of file")
-    success = create(master, file_content, file_name)
-    if success:
-        messagebox.showinfo(
-            'Create Success', 'File successfully created on Server')
-        refreshAllFiles()
-        clearDisplay()
-        clearFileEntry()
-        clearEditEntry()
-    else:
-        notice.config(text="Error creating file on Server")
+    master = connect_to_master()
+    if master is None:
+         messagebox.showinfo('Error', "Master not available, only read")
+
+    if master is not None: 
+        file_name = filenameEntry.get()
+        if len(str(file_name)) == 0:
+            messagebox.showinfo('Error', "Please enter filename")
+        file_content = str(contentEntry.get())
+        print(file_content)
+        if len(str(file_content)) == 0:
+            messagebox.showinfo('Error', "Please enter content of file")
+        success = create(master, file_content, file_name)
+        if success:
+            messagebox.showinfo(
+                'Create Success', 'File successfully created on Server')
+            refreshAllFiles()
+            clearDisplay()
+            clearFileEntry()
+            clearEditEntry()
+        else:
+            notice.config(text="Error creating file on Server")
 
 
 def appendFile():
-    file_name = filenameEntry.get()
-    if len(str(file_name)) == 0:
-        messagebox.showinfo('Error', "Please enter filename")
-    content_to_append = str(contentEntry.get())
-    print("content:", content_to_append)
-    success = write_append(master, content_to_append, file_name)
-    if success:
-        messagebox.showinfo('Append Success', 'Successfully Appended to File')
-        refreshAllFiles()
-        clearDisplay()
-        contentEntry.delete(0, "end")
-        readFile(file_name)
-        clearEditEntry()
-    else:
-        messagebox.showinfo('Append Failure', 'Error Appending to File')
+    master = connect_to_master()
+    if master is None:
+         messagebox.showinfo('Error', "Master not available, only read")
+
+    if master is not None: 
+        file_name = filenameEntry.get()
+        if len(str(file_name)) == 0:
+            messagebox.showinfo('Error', "Please enter filename")
+        content_to_append = str(contentEntry.get())
+        print("content:", content_to_append)
+        success = write_append(master, content_to_append, file_name)
+        if success:
+            messagebox.showinfo('Append Success', 'Successfully Appended to File')
+            refreshAllFiles()
+            clearDisplay()
+            contentEntry.delete(0, "end")
+            readFile(file_name)
+            clearEditEntry()
+        else:
+            messagebox.showinfo('Append Failure', 'Error Appending to File')
 
 
 ws = Tk()
