@@ -49,7 +49,7 @@ def split_list(a_list, no_of_parts):
     length = len(a_list)
     if no_of_parts > length:
         raise ValueError("Number of primaries specified exceeds secondaries available!")
-    return [a_list[i*length // no_of_parts: (i+1)*length // no_of_parts] 
+    return [a_list[i*length // no_of_parts: (i+1)*length // no_of_parts]
              for i in range(no_of_parts) ]
 
 class MasterService(rpyc.Service):
@@ -87,7 +87,7 @@ class MasterService(rpyc.Service):
             primary_secondary_table[primary_idx] = sec_chunkserver_grp
         print(primary_secondary_table)
         print("---- Leasing completed. Pri to Sec mapping: {} ----".format(primary_secondary_table))
-        
+
 
         # # Check if NUMBER OF REPLICATIONS IS HIGHER THAN NUMBER OF CHUNKSERVERS
         # if num_replica > (len(chunkServers)+len(chunkReplicas))/len(chunkServers) :
@@ -214,18 +214,11 @@ class MasterService(rpyc.Service):
                 block_uuid = uuid.uuid1()
                 block_uuid = str(block_uuid)
                 # Master is randomly assigning Chunkservers to each block
-<<<<<<< HEAD
-                # nodes_id = random.choice(list(self.__class__.chunkServers.keys()))
-                nodes_id = self.get_most_available_primary()
-                replicas_ids = []
-                for i in range(self.__class__.num_replica-1):
-                    replicas_ids.append(str(nodes_id)+"."+str(i+1))
-                blocks.append((block_uuid, nodes_id, replicas_ids))
-=======
                 primaryServers = {}
                 for primary_id in self.__class__.primary_secondary_table:
                     primaryServers[primary_id] = self.__class__.allChunkServers
-                primary_id = random.choice(list(primaryServers.keys()))
+                # primary_id = random.choice(list(primaryServers.keys()))
+                primary_id = self.get_most_available_primary()
                 print("primary_id:", primary_id)
                 secondaryServers = {}
                 for secondary_id in self.__class__.primary_secondary_table[primary_id]:
@@ -234,7 +227,6 @@ class MasterService(rpyc.Service):
                 # for i in range(self.__class__.num_replica-1):
                 #     replicas_ids.append(str(nodes_id)+"."+str(i+1))
                 blocks.append((block_uuid, primary_id, secondary_ids))
->>>>>>> c90fb022e016f5c2e0bde56fd0c18156cb4419cd
 
                 # append block_id , Chunk_server_id, Chunk_server's replicas_ids, index_of_block
                 self.__class__.file_table[dest].append((block_uuid, primary_id, secondary_ids, i))
@@ -247,12 +239,8 @@ class MasterService(rpyc.Service):
                 block_uuid = uuid.uuid1()
                 block_uuid = str(block_uuid)
                 # Master is randomly assigning Chunkservers to each block
-<<<<<<< HEAD
-                # nodes_id = random.choice(list(self.__class__.chunkServers.keys()))
+                # nodes_id = random.choice(list(self.exposed_get_primaryServers().keys())) #TODO
                 nodes_id = self.get_most_available_primary()
-=======
-                nodes_id = random.choice(list(self.exposed_get_primaryServers().keys())) #TODO
->>>>>>> c90fb022e016f5c2e0bde56fd0c18156cb4419cd
                 blocks.append((block_uuid, nodes_id))
 
             return blocks
