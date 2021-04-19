@@ -171,6 +171,26 @@ class MasterService(rpyc.Service):
         #     #print("master get_chunkReplicas:", self.__class__.chunkReplicas)
         #     return self.__class__.chunkReplicas
 
+        def num_filled_blocks(self, chunkserver_id):
+            blocks_filled = 0
+            for file in self.__class__.file_table:
+                chunk_list = self.__class__.file_table[file]
+                for chunk in chunk_list:
+                    if chunk[1] == chunkserver_id:
+                        blocks_filled += 1
+            return blocks_filled
+        def get_most_available_primary(self):
+            primaryServers = self.exposed_get_primaryServers()
+            blocks_filled_dict = {}
+            for primary in primaryServers:
+                blocks_filled_dict[primary] = self.num_filled_blocks(primary)
+
+            v = list(blocks_filled_dict.values())
+            k = list(blocks_filled_dict.keys())
+            return k[v.index(max(v))]
+
+
+
         def calc_num_blocks(self, size):
             return int(math.ceil(float(size) / self.__class__.block_size))
 
@@ -183,7 +203,8 @@ class MasterService(rpyc.Service):
                 block_uuid = uuid.uuid1()
                 block_uuid = str(block_uuid)
                 # Master is randomly assigning Chunkservers to each block
-                nodes_id = random.choice(list(self.__class__.chunkServers.keys()))
+                # nodes_id = random.choice(list(self.__class__.chunkServers.keys()))
+                nodes_id = self.get_most_available_primary()
                 replicas_ids = []
                 for i in range(self.__class__.num_replica-1):
                     replicas_ids.append(str(nodes_id)+"."+str(i+1))
@@ -200,7 +221,8 @@ class MasterService(rpyc.Service):
                 block_uuid = uuid.uuid1()
                 block_uuid = str(block_uuid)
                 # Master is randomly assigning Chunkservers to each block
-                nodes_id = random.choice(list(self.__class__.chunkServers.keys()))
+                # nodes_id = random.choice(list(self.__class__.chunkServers.keys()))
+                nodes_id = self.get_most_available_primary()
                 blocks.append((block_uuid, nodes_id))
 
             return blocks
