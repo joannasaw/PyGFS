@@ -15,6 +15,8 @@ import copy
 
 # when signal is received for keyboard cancel, this function runs to save
 # TODO: create a backup server to integrate with this
+
+
 def int_handler(signal, frame):
     file_table = MasterService.exposed_Master.file_table
     allChunkServers = MasterService.exposed_Master.allChunkServers
@@ -45,6 +47,7 @@ def get_heartbeat(chunkServerStatus, chunkServer_idx, host, port):
         # msg = conn.root.Chunks().get_heartbeat()
         # print(msg)
         conn.root.Chunks().get_heartbeat()
+
         # print("Heartbeat to chunkserver: {}, {} successful".format(host, port))
         # conn.close()
         status = "alive"
@@ -97,6 +100,7 @@ class MasterService(rpyc.Service):
     class exposed_Master():
         print("start")
         file_table = {}
+
         # chunkServers = {}
         # chunkReplicas = {}
         allChunkServers = {} #e.g. {"1":("127.0.0.1","8888"), "2":("127.0.0.1","8887")}
@@ -104,10 +108,28 @@ class MasterService(rpyc.Service):
         primary_secondary_table = {}    # primary_secondary_table[primary_id] = [secondary_id_1, secondary_id_2]
                                         # e.g. {"1":["2","4"], "5":["3","6"]}
 
+        # Attempt to connect to a primary master server if it is running
+        try:
+            con = rpyc.connect("127.0.0.1", port=8100)
+            print(" ----- Connected to Shadow Master ------")
+            back_up_server = con.root.BackUpServer()
+            file_table_backup = back_up_server.getFileTable()
+            file_table = json.loads(file_table_backup)
+            allChunkServers_backup = back_up_server.getAllChunkServers()
+            allChunkServers = json.loads(allChunkServers_backup)
+            primary_secondary_table_backup = back_up_server.getPrimarySecondary()
+            primary_secondary_table = json.loads(primary_secondary_table_backup)
+            # con.close()
+        except:
+            print("\n -----Info: Shadow Master not found !!! ------- ")
+            print(" -----Start the Shadow Master ------- \n \n ")
+
+
         # Retrieve IP address information in GFS config for Chunkservers
         conf = configparser.ConfigParser()
         conf.read_file(open('GFS.conf'))
         block_size = int(conf.get('master', 'block_size'))
+
         num_primary = int(conf.get('master', 'num_primary'))
         allChunkServers_conf = conf.get('master', 'chunkServers').split(',')
 
@@ -122,18 +144,6 @@ class MasterService(rpyc.Service):
         # # Check if NUMBER OF REPLICATIONS IS HIGHER THAN NUMBER OF CHUNKSERVERS
         # if num_replica > (len(chunkServers)+len(chunkReplicas))/len(chunkServers) :
         #     print("WARNING: NUMBER OF REPLICATIONS IS HIGHER THAN NUMBER OF CHUNKSERVERS")
-
-        # Attempt to connect to a primary master server if it is running (NOT IMPLEMENTED FOR NOW)
-        try:
-            con = rpyc.connect("127.0.0.1", port=8100)
-            print(" ----- Connected to Shadow Master ------")
-            back_up_server = con.root.BackUpServer()
-            file_table_backup = back_up_server.getFileTable()
-            file_table = json.loads(file_table_backup)
-            # con.close()
-        except:
-            print("\n -----Info: Shadow Master not found !!! ------- ")
-            print(" -----Start the Shadow Master ------- \n \n ")
 
         for chunkServer_idx in allChunkServers:
             host, port = allChunkServers[chunkServer_idx]
@@ -161,6 +171,7 @@ class MasterService(rpyc.Service):
             print("---- Leasing completed. Pri to Sec mapping: {} ----".format(self.__class__.primary_secondary_table))
             pass
 
+
 ######### MASTER FUNCTIONS #########
         def exposed_read(self, fname):
             mapping = self.__class__.file_table[fname]
@@ -173,12 +184,10 @@ class MasterService(rpyc.Service):
             if self.exists(dest):
                 pass
 
-            self.__class__.file_table[dest] = [] # overwrites?
+            self.__class__.file_table[dest] = []  # will append to this empty list later
 
             num_blocks = self.calc_num_blocks(size)
-            print("number of blocks")
-            print(num_blocks)
-            blocks = self.alloc_write(dest, num_blocks)
+            blocks = self.alloc_blocks(dest, num_blocks)
             # master returns block to client
             return blocks
 
@@ -191,9 +200,7 @@ class MasterService(rpyc.Service):
             # self.__class__.file_table[dest] = []
 
             num_blocks = self.calc_num_blocks(size)
-            print("number of blocks")
-            print(num_blocks)
-            blocks = self.alloc_append(dest, num_blocks)
+            blocks = self.alloc_blocks(dest, num_blocks)
             # master returns block to client
             return blocks
 
@@ -241,6 +248,40 @@ class MasterService(rpyc.Service):
         # def exposed_get_chunkReplicas(self):
         #     #print("master get_chunkReplicas:", self.__class__.chunkReplicas)
         #     return self.__class__.chunkReplicas
+        def find_primary_with_least(self):
+            primary_secondary_table = self.__class__.primary_secondary_table
+            output = ""
+            count = sys.maxsize
+            for primary in primary_secondary_table:
+                num_sec = len(primary_secondary_table[primary])
+                if num_sec < count:
+                    output = primary
+                    count = num_sec
+            return output
+
+
+        def update_primary(self, old_primary, new_primary, new_secondarys):
+            # Update primary_secondary_table
+            primary_secondary_table = self.__class__.primary_secondary_table
+            try:
+                primary_secondary_table.pop(old_primary)
+            except Exception as e:
+                print(e)
+                print("Old primary is not an actual primary")
+                print(primary_secondary_table)
+                return
+            primary_secondary_table[new_primary] = new_secondarys
+            # Update file_table
+            file_table = self.__class__.file_table
+            for file in file_table:
+                chunk_list = file_table[file]
+                for i in range(len(chunk_list)):
+                    old_p = chunk_list[i][1]
+                    if old_p == old_primary:
+                        file_table[file][i][1] = new_primary
+                        file_table[file][i][2] = new_secondarys
+            self.__class__.file_table = file_table
+
 
         def num_filled_blocks(self, chunkserver_id):
             blocks_filled = 0
@@ -277,39 +318,36 @@ class MasterService(rpyc.Service):
         def exists(self, file):
             return file in self.__class__.file_table
 
-        def alloc_write(self, dest, num):
-            blocks = []
-            for i in range(0, num):
-                print("block ", i+1)
-                block_uuid = uuid.uuid1()
-                block_uuid = str(block_uuid)
-                # Master is randomly assigning Chunkservers to each block
-                # primaryServers = {}
-                # for primary_id in self.__class__.primary_secondary_table:
-                #     primaryServers[primary_id] = self.__class__.allChunkServers
-                # primary_id = random.choice(list(primaryServers.keys()))
-                primary_id = self.get_most_available_primary()
-                print("primary_id:", primary_id)
-                secondaryServers = self.exposed_get_secondaryServers(primary_id)
-                # for secondary_id in self.__class__.primary_secondary_table[primary_id]:
-                #     secondaryServers[secondary_id] = self.__class__.allChunkServers
-                secondary_ids = list(secondaryServers.keys())
-                # for i in range(self.__class__.num_replica-1):
-                #     replicas_ids.append(str(nodes_id)+"."+str(i+1))
-                blocks.append((block_uuid, primary_id, secondary_ids))
-
-                # append block_id , Chunk_server_id, Chunk_server's replicas_ids, index_of_block
-                self.__class__.file_table[dest].append((block_uuid, primary_id, secondary_ids, i))
-
-            return blocks
+        # def alloc_write(self, dest, num):
+        #     blocks = []
+        #     for i in range(0, num):
+        #         block_uuid = uuid.uuid1()
+        #         block_uuid = str(block_uuid)
+        #         # Master is randomly assigning Chunkservers to each block
+        #         # primaryServers = {}
+        #         # for primary_id in self.__class__.primary_secondary_table:
+        #         #     primaryServers[primary_id] = self.__class__.allChunkServers
+        #         # primary_id = random.choice(list(primaryServers.keys()))
+        #         primary_id = self.get_most_available_primary()
+        #         print("primary_id:", primary_id)
+        #         secondaryServers = self.exposed_get_secondaryServers(primary_id)
+        #         # for secondary_id in self.__class__.primary_secondary_table[primary_id]:
+        #         #     secondaryServers[secondary_id] = self.__class__.allChunkServers
+        #         secondary_ids = list(secondaryServers.keys())
+        #         # for i in range(self.__class__.num_replica-1):
+        #         #     replicas_ids.append(str(nodes_id)+"."+str(i+1))
+        #         blocks.append((block_uuid, primary_id, secondary_ids))
+        #
+        #         # append block_id , Chunk_server_id, Chunk_server's replicas_ids, index_of_block
+        #         self.__class__.file_table[dest].append((block_uuid, primary_id, secondary_ids, i))
+        #
+        #     return blocks
 
         def alloc_blocks(self, dest, num):
             blocks = []
-            for _ in range(0, num):
+            for i in range(0, num):
                 block_uuid = uuid.uuid1()
                 block_uuid = str(block_uuid)
-                # Master is randomly assigning Chunkservers to each block
-                # nodes_id = random.choice(list(self.exposed_get_primaryServers().keys())) #TODO
                 primary_id = self.get_most_available_primary()
                 secondaryServers = self.exposed_get_secondaryServers(primary_id)
                 secondary_ids = list(secondaryServers.keys())
@@ -318,11 +356,11 @@ class MasterService(rpyc.Service):
 
             return blocks
 
-        def alloc_append(self, filename, num_append_blocks): # append blocks
-            block_uuids = self.__class__.file_table[filename]
-            append_block_uuids = self.alloc_blocks(filename, num_append_blocks)
-            block_uuids.extend(append_block_uuids)
-            return append_block_uuids
+        # def alloc_append(self, filename, num_append_blocks):  # append blocks
+        #     # block_uuids = self.__class__.file_table[filename]
+        #     append_block_uuids = self.alloc_blocks(num_append_blocks)
+        #     # block_uuids.extend(append_block_uuids)
+        #     return append_block_uuids
 
 
 if __name__ == "__main__":

@@ -13,13 +13,14 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 BASE_PATH = str(Path(dir_path).parents[0])
 # DATA_DIR = os.path.sep.join([BASE_PATH, "gfs_root"])
 
+
 class ChunkServerService(rpyc.Service):
     class exposed_Chunks():
         blocks = {}
 
-        def exposed_get_heartbeat(self): # this is an exposed method
+        def exposed_get_heartbeat(self):  # this is an exposed method
             return "I'm ok"
-
+          
         def exposed_put(self, block_uuid, data, secondaryServers):
             with open(os.path.sep.join([DATA_DIR, str(block_uuid)]), 'w') as f:
                 f.write(data)
@@ -31,7 +32,6 @@ class ChunkServerService(rpyc.Service):
             with open(os.path.sep.join([DATA_DIR, str(block_uuid)]), 'w') as f:
                 f.write(data)
                 print("WRITING:", data)
-
 
         def exposed_get(self, block_uuid):
             block_addr = os.path.sep.join([DATA_DIR, str(block_uuid)])
@@ -53,6 +53,7 @@ class ChunkServerService(rpyc.Service):
                 secondary.replicate(block_uuid,data)
 
         def exposed_delete_block(self, block_uuid, secondaryServers):
+
             block_addr = os.path.sep.join([DATA_DIR, str(block_uuid)])
             if debug_Mode:
                 print("deleting")
@@ -87,6 +88,7 @@ class ChunkServerService(rpyc.Service):
 
 
 if __name__ == "__main__":
+
     port = input("Enter the server port [Default = 8888]:")
     if port:
         port = int(port)
