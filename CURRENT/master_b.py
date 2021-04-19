@@ -143,10 +143,10 @@ class MasterService(rpyc.Service):
             if self.exists(dest):
                 pass
 
-            self.__class__.file_table[dest] = []  # overwrites?
+            self.__class__.file_table[dest] = []  # will append to this empty list later
 
             num_blocks = self.calc_num_blocks(size)
-            blocks = self.alloc_write(dest, num_blocks)
+            blocks = self.alloc_blocks(dest, num_blocks)
             # master returns block to client
             return blocks
 
@@ -157,7 +157,7 @@ class MasterService(rpyc.Service):
             # self.__class__.file_table[dest] = []
 
             num_blocks = self.calc_num_blocks(size)
-            blocks = self.alloc_append(dest, num_blocks)
+            blocks = self.alloc_blocks(dest, num_blocks)
             # master returns block to client
             return blocks
 
@@ -267,50 +267,49 @@ class MasterService(rpyc.Service):
         def exists(self, file):
             return file in self.__class__.file_table
 
-        def alloc_write(self, dest, num):
-            blocks = []
-            for i in range(0, num):
-                block_uuid = uuid.uuid1()
-                block_uuid = str(block_uuid)
-                # Master is randomly assigning Chunkservers to each block
-                # primaryServers = {}
-                # for primary_id in self.__class__.primary_secondary_table:
-                #     primaryServers[primary_id] = self.__class__.allChunkServers
-                # primary_id = random.choice(list(primaryServers.keys()))
-                primary_id = self.get_most_available_primary()
-                print("primary_id:", primary_id)
-                secondaryServers = self.exposed_get_secondaryServers(primary_id)
-                # for secondary_id in self.__class__.primary_secondary_table[primary_id]:
-                #     secondaryServers[secondary_id] = self.__class__.allChunkServers
-                secondary_ids = list(secondaryServers.keys())
-                # for i in range(self.__class__.num_replica-1):
-                #     replicas_ids.append(str(nodes_id)+"."+str(i+1))
-                blocks.append((block_uuid, primary_id, secondary_ids))
-
-                # append block_id , Chunk_server_id, Chunk_server's replicas_ids, index_of_block
-                self.__class__.file_table[dest].append((block_uuid, primary_id, secondary_ids, i))
-
-            return blocks
+        # def alloc_write(self, dest, num):
+        #     blocks = []
+        #     for i in range(0, num):
+        #         block_uuid = uuid.uuid1()
+        #         block_uuid = str(block_uuid)
+        #         # Master is randomly assigning Chunkservers to each block
+        #         # primaryServers = {}
+        #         # for primary_id in self.__class__.primary_secondary_table:
+        #         #     primaryServers[primary_id] = self.__class__.allChunkServers
+        #         # primary_id = random.choice(list(primaryServers.keys()))
+        #         primary_id = self.get_most_available_primary()
+        #         print("primary_id:", primary_id)
+        #         secondaryServers = self.exposed_get_secondaryServers(primary_id)
+        #         # for secondary_id in self.__class__.primary_secondary_table[primary_id]:
+        #         #     secondaryServers[secondary_id] = self.__class__.allChunkServers
+        #         secondary_ids = list(secondaryServers.keys())
+        #         # for i in range(self.__class__.num_replica-1):
+        #         #     replicas_ids.append(str(nodes_id)+"."+str(i+1))
+        #         blocks.append((block_uuid, primary_id, secondary_ids))
+        #
+        #         # append block_id , Chunk_server_id, Chunk_server's replicas_ids, index_of_block
+        #         self.__class__.file_table[dest].append((block_uuid, primary_id, secondary_ids, i))
+        #
+        #     return blocks
 
         def alloc_blocks(self, num):
             blocks = []
             for i in range(0, num):
                 block_uuid = uuid.uuid1()
                 block_uuid = str(block_uuid)
-                # Master is randomly assigning Chunkservers to each block
-                # nodes_id = random.choice(list(self.exposed_get_primaryServers().keys())) #TODO
                 primary_id = self.get_most_available_primary()
                 secondaryServers = self.exposed_get_secondaryServers(primary_id)
                 secondary_ids = list(secondaryServers.keys())
                 blocks.append((block_uuid, primary_id, secondary_ids))
+                self.__class__.file_table[dest].append((block_uuid, primary_id, secondary_ids, i))
 
             return blocks
 
-        def alloc_append(self, filename, num_append_blocks):  # append blocks
-            block_uuids = self.__class__.file_table[filename]
-            append_block_uuids = self.alloc_blocks(num_append_blocks)
-            block_uuids.extend(append_block_uuids)
-            return append_block_uuids
+        # def alloc_append(self, filename, num_append_blocks):  # append blocks
+        #     # block_uuids = self.__class__.file_table[filename]
+        #     append_block_uuids = self.alloc_blocks(num_append_blocks)
+        #     # block_uuids.extend(append_block_uuids)
+        #     return append_block_uuids
 
 
 if __name__ == "__main__":
