@@ -11,7 +11,7 @@ debug_Mode = True
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 BASE_PATH = str(Path(dir_path).parents[0])
-DATA_DIR = os.path.sep.join([BASE_PATH, "gfs_root"])
+# DATA_DIR = os.path.sep.join([BASE_PATH, "gfs_root"])
 
 class ChunkServerService(rpyc.Service):
     class exposed_Chunks():
@@ -87,12 +87,17 @@ class ChunkServerService(rpyc.Service):
 
 
 if __name__ == "__main__":
-    if not os.path.isdir(DATA_DIR): os.mkdir(DATA_DIR)
     port = input("Enter the server port [Default = 8888]:")
     if port:
         port = int(port)
     else:
         port = 8888
+
+    DATA_DIR = os.path.sep.join([BASE_PATH, "gfs_root", str(port)])
+    # print(DATA_DIR)
+    # print(os.path.exists(DATA_DIR))
+    if not os.path.exists(DATA_DIR):
+        os.makedirs(DATA_DIR)
 
     t = ThreadedServer(ChunkServerService, port=port)
     print("Starting chunkserver service on port", port)
