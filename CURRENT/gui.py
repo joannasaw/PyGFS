@@ -185,7 +185,7 @@ def appendFile():
 
 ws = Tk()
 ws.title("Budget GFS")
-ws.geometry("700x530")
+ws.geometry("700x580")
 ws['bg'] = '#2a636e'
 
 # adding frames
