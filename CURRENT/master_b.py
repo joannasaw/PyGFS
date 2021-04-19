@@ -189,6 +189,28 @@ class MasterService(rpyc.Service):
         # def exposed_get_chunkReplicas(self):
         #     #print("master get_chunkReplicas:", self.__class__.chunkReplicas)
         #     return self.__class__.chunkReplicas
+        def update_primary(self, old_primary, new_primary, new_secondarys):
+            # Update primary_secondary_table
+            primary_secondary_table = self.__class__.primary_secondary_table
+            try:
+                primary_secondary_table.pop(old_primary)
+            except Exception as e:
+                print(e)
+                print("Old primary is not an actual primary")
+                print(primary_secondary_table)
+                return
+            primary_secondary_table[new_primary] = new_secondarys
+            # Update file_table
+            file_table = self.__class__.file_table
+            for file in file_table:
+                chunk_list = file_table[file]
+                for i in range(len(chunk_list)):
+                    old_p = chunk_list[i][1]
+                    if old_p == old_primary:
+                        file_table[file][i][1] = new_primary
+                        file_table[file][i][2] = new_secondarys
+            self.__class__.file_table = file_table
+
 
         def num_filled_blocks(self, chunkserver_id):
             blocks_filled = 0
