@@ -4,7 +4,7 @@ from pathlib import Path
 
 from rpyc.utils.server import ThreadedServer
 
-debug_Mode = False
+debug_Mode = True
 
 # DATA_DIR = os.path.expanduser("~")
 # DATA_DIR += "/gfs_root/"
@@ -52,15 +52,38 @@ class ChunkServerService(rpyc.Service):
                 secondary = con.root.Chunks()
                 secondary.replicate(block_uuid,data)
 
-        def exposed_delete_block(self,block_uuid):
+        def exposed_delete_block(self, block_uuid, secondaryServers):
+            block_addr = os.path.sep.join([DATA_DIR, str(block_uuid)])
+            if debug_Mode:
+                print("deleting")
+                print(block_addr)
+            self.forward_delete(block_uuid,secondaryServers)
+            if not os.path.isfile(block_addr):
+                return None
+            os.remove(block_addr)
+            return True
+
+        def forward_delete(self,block_uuid,secondaryServers):
+            if debug_Mode:
+                print("-: forwarding delete to:")
+                print(block_uuid, secondaryServers)
+            #chunkServer = chunkServers[0]
+            #chunkServers = chunkServers[1:]
+            #print(chunkReplicas)
+            for i in secondaryServers:
+                host, port = i
+                con = rpyc.connect(host, port=port)
+                chunkServer = con.root.Chunks()
+                chunkServer.delete_for_replica(block_uuid)
+
+        def exposed_delete_for_replica(self, block_uuid):
             block_addr = os.path.sep.join([DATA_DIR, str(block_uuid)])
             if debug_Mode:
                 print("deleting")
                 print(block_addr)
             if not os.path.isfile(block_addr):
-                return None
+                print("file to delete not in chunk")
             os.remove(block_addr)
-            return True
 
 
 if __name__ == "__main__":

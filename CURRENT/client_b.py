@@ -36,18 +36,18 @@ def read_from_chunkServer(block_uuid, chunkServer):
     return chunkServer.get(block_uuid)
 
 
-def delete_from_chunks(block_uuid, chunkServer):
-    host, port = chunkServer
+def delete_from_chunks(block_uuid, primaryServer, secondaryServers):
+    host, port = primaryServer
     try:
         con = rpyc.connect(host, port=port)
-        chunkServer = con.root.Chunks()
+        primaryService = con.root.Chunks()
     except:
         print("\n----Chunk Server not found -------")
         print("client: delete_from_chunks")
         print("----Start Chunks.py then try again ------ \n \n ")
         sys.exit(1)
 
-    return chunkServer.delete_block(block_uuid)
+    return primaryService.delete_block(block_uuid, secondaryServers)
 
 
 def get(master, fname):
@@ -82,18 +82,21 @@ def get(master, fname):
 
 
 def delete(master, fname):
-    file_table = master.delete(fname)
+    file_table = master.get_file_table_entry(fname)
     if not file_table:
         print("File is not in the list. \n  Check list of files first")
         return False
     print("File entry deleted from Master server table")
 
     for block in file_table:
+        secondaryServers = [master.get_secondaryServers(block[1])[_] for _ in block[2]]
         for m in [master.get_primaryServers()[_] for _ in block[1]]:
-            condition = delete_from_chunks(block[0], m)
+            condition = delete_from_chunks(block[0], m, secondaryServers)
             if not condition:
                 print("Error: File not found in chunk servers")
                 return False
+
+    file_table = master.delete(fname)
     print("File deleted from chunk servers")
     return True
 

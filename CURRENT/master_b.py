@@ -248,8 +248,10 @@ class MasterService(rpyc.Service):
                 block_uuid = str(block_uuid)
                 # Master is randomly assigning Chunkservers to each block
                 # nodes_id = random.choice(list(self.exposed_get_primaryServers().keys())) #TODO
-                nodes_id = self.get_most_available_primary()
-                blocks.append((block_uuid, nodes_id))
+                primary_id = self.get_most_available_primary()
+                secondaryServers = self.exposed_get_secondaryServers(primary_id)
+                secondary_ids = list(secondaryServers.keys())
+                blocks.append((block_uuid, primary_id, secondary_ids))
 
             return blocks
 
