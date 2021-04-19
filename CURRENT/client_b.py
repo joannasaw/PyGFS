@@ -5,6 +5,7 @@ import os
 debug_Mode = False
 
 
+
 def send_to_chunkServer(block_uuid, data, primaryServer, secondaryServers):
     if debug_Mode:
         print("send_to_chunksServer primaryServer:", primaryServer)
@@ -14,6 +15,7 @@ def send_to_chunkServer(block_uuid, data, primaryServer, secondaryServers):
         con = rpyc.connect(host, port=port)
         primaryService = con.root.Chunks()
         primaryService.put(block_uuid, data, secondaryServers)
+
     except Exception as e:
         print("\n----Chunk Server not found -------"+str(host)+":"+str(port))
         print("client: send_to_chunkServer")
@@ -67,6 +69,7 @@ def get(master, fname):
                 print("Found in Primary")
                 full_data += data
                 break
+
             else:
                 print("Err: Primary not responding")
                 for n in [master.get_secondaryServers(block[1])[_] for _ in block[2]]:
@@ -78,6 +81,7 @@ def get(master, fname):
                         break
                     else:
                         print("Err: Secondaries also not responding")
+
     return full_data
 
 
@@ -104,10 +108,12 @@ def delete(master, fname):
 def write_b(master, b, data):
     block_uuid = b[0]  # b[0] is the unique ID of each block
     # getting chunkserver details for the block
+
     primaryServer = [master.get_primaryServers()[_] for _ in b[1]][0]
     secondaryServers = [master.get_secondaryServers(b[1])[_] for _ in b[2]]
 
     send_to_chunkServer(block_uuid, data, primaryServer, secondaryServers)
+
     if debug_Mode:
         print("write_b data:", data)
 
@@ -140,6 +146,7 @@ def create(master, string_data, dest):
     print("File is hosted across chunk servers successfully!")
     return True
 
+
 def write_append(master, string_data, dest):
     if master.get_file_table_entry(dest) == None:
         raise Exception("append error, file does not exist: "
@@ -160,6 +167,7 @@ def write_append(master, string_data, dest):
 def list_files(master):
     files = master.get_list_of_files()
     print(files)
+
 
 def connect_to_master():
     try:
@@ -191,6 +199,7 @@ def main(args):
 
     while True:
         try:
+
             master = connect_to_master()
             if master is not None:
                 request = input(
@@ -236,6 +245,7 @@ def main(args):
                         print("Client has reset")
                     else:
                         print("Unable to reset client")
+
                 else:
                     print("Invalid action entered! Try again.")
             else:

@@ -15,6 +15,8 @@ import copy
 
 # when signal is received for keyboard cancel, this function runs to save
 # TODO: create a backup server to integrate with this
+
+
 def int_handler(signal, frame):
     file_table = MasterService.exposed_Master.file_table
     allChunkServers = MasterService.exposed_Master.allChunkServers
@@ -37,6 +39,7 @@ def int_handler(signal, frame):
 
     sys.exit(0)
 
+
 def get_heartbeat(host, port):
     HEARTBEAT_INTERVAL = 5
     try:
@@ -44,11 +47,14 @@ def get_heartbeat(host, port):
         # msg = conn.root.Chunks().get_heartbeat()
         # print(msg)
         conn.root.Chunks().get_heartbeat()
+
         # print("Heartbeat to chunkserver: {}, {} successful".format(host, port))
         # conn.close()
 
+
     except Exception as e:
         print("Heartbeat to chunkserver: {}, {} failed".format(host, port))
+
 
     heartbeat_timer = Timer(HEARTBEAT_INTERVAL, get_heartbeat, args=[host,port])
     heartbeat_timer.start()
@@ -60,10 +66,12 @@ def split_list(a_list, no_of_parts):
     return [a_list[i*length // no_of_parts: (i+1)*length // no_of_parts]
              for i in range(no_of_parts) ]
 
+
 class MasterService(rpyc.Service):
     class exposed_Master():
         print("start")
         file_table = {}
+
         # chunkServers = {}
         # chunkReplicas = {}
         allChunkServers = {} #e.g. {"1":("127.0.0.1","8888"), "2":("127.0.0.1","8887")}
@@ -74,6 +82,7 @@ class MasterService(rpyc.Service):
         conf = configparser.ConfigParser()
         conf.read_file(open('GFS.conf'))
         block_size = int(conf.get('master', 'block_size'))
+
         num_primary = int(conf.get('master', 'num_primary'))
         allChunkServers_conf = conf.get('master', 'chunkServers').split(',')
 
@@ -126,7 +135,7 @@ class MasterService(rpyc.Service):
             if self.exists(dest):
                 pass
 
-            self.__class__.file_table[dest] = [] # overwrites?
+            self.__class__.file_table[dest] = []  # overwrites?
 
             num_blocks = self.calc_num_blocks(size)
             blocks = self.alloc_write(dest, num_blocks)
@@ -277,7 +286,7 @@ class MasterService(rpyc.Service):
 
             return blocks
 
-        def alloc_append(self, filename, num_append_blocks): # append blocks
+        def alloc_append(self, filename, num_append_blocks):  # append blocks
             block_uuids = self.__class__.file_table[filename]
             append_block_uuids = self.alloc_blocks(num_append_blocks)
             block_uuids.extend(append_block_uuids)
