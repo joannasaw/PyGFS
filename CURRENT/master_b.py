@@ -206,6 +206,18 @@ class MasterService(rpyc.Service):
         # def exposed_get_chunkReplicas(self):
         #     #print("master get_chunkReplicas:", self.__class__.chunkReplicas)
         #     return self.__class__.chunkReplicas
+        def find_primary_with_least(self):
+            primary_secondary_table = self.__class__.primary_secondary_table
+            output = ""
+            count = sys.maxsize
+            for primary in primary_secondary_table:
+                num_sec = len(primary_secondary_table[primary])
+                if num_sec < count:
+                    output = primary
+                    count = num_sec
+            return output
+
+
         def update_primary(self, old_primary, new_primary, new_secondarys):
             # Update primary_secondary_table
             primary_secondary_table = self.__class__.primary_secondary_table
