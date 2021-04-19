@@ -20,13 +20,13 @@ class ChunkServerService(rpyc.Service):
         def exposed_get_heartbeat(self): # this is an exposed method
             return "I'm ok"
 
-        def exposed_put(self, block_uuid, data, chunkReplicas):
+        def exposed_put(self, block_uuid, data, secondaryServers):
             with open(os.path.sep.join([DATA_DIR, str(block_uuid)]), 'w') as f:
                 f.write(data)
                 print("WRITING:", data)
-            if len(chunkReplicas) > 0:
-                self.forward(block_uuid, data, chunkReplicas)
-        
+            if len(secondaryServers) > 0:
+                self.forward(block_uuid, data, secondaryServers)
+
         def exposed_replicate(self, block_uuid, data):
             with open(os.path.sep.join([DATA_DIR, str(block_uuid)]), 'w') as f:
                 f.write(data)
@@ -40,17 +40,17 @@ class ChunkServerService(rpyc.Service):
             with open(block_addr) as f:
                 return f.read()
 
-        def forward(self,block_uuid,data,chunkReplicas):
+        def forward(self,block_uuid,data,secondaryServers):
             if debug_Mode:
                 print("-: forwarding to:")
-                print(block_uuid, chunkReplicas)
+                print(block_uuid, secondaryServers)
             #chunkServer = chunkServers[0]
             #chunkServers = chunkServers[1:]
-            for i in chunkReplicas:
+            for i in secondaryServers:
                 host, port = i
                 con = rpyc.connect(host, port=port)
-                chunkReplica = con.root.Chunks()
-                chunkReplica.replicate(block_uuid,data)
+                secondary = con.root.Chunks()
+                secondary.replicate(block_uuid,data)
 
         def exposed_delete_block(self,block_uuid):
             block_addr = os.path.sep.join([DATA_DIR, str(block_uuid)])
