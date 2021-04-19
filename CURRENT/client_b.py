@@ -89,6 +89,7 @@ def delete(master, fname):
     print("File entry deleted from Master server table")
 
     for block in file_table:
+        # seems to have unnecessary overparsing to get primary ID '2' from e.g. block = ('8a1fdfdc-9fee-11eb-b262-00155d7a8699', '2', ['3', '4'], 0)
         secondaryServers = [master.get_secondaryServers(block[1])[_] for _ in block[2]]
         for m in [master.get_primaryServers()[_] for _ in block[1]]:
             condition = delete_from_chunks(block[0], m, secondaryServers)
