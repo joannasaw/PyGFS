@@ -55,6 +55,7 @@ def delete_from_chunks(block_uuid, primaryServer, secondaryServers):
 def get(master, fname):
     full_data = ""
     file_table = master.get_file_table_entry(fname)
+    print(file_table)
     if not file_table:
         print("File is not in the list. \n  Check list of files first")
         return
@@ -62,8 +63,11 @@ def get(master, fname):
     for block in file_table:
         if debug_Mode:
             print(block)
+        print(block)
         for m in [master.get_primaryServers()[_] for _ in block[1]]:
+            print(m)
             data = read_from_chunkServer(block[0], m)
+            print(data)
             if data:
                 # sys.stdout.write(data)
                 print("Found in Primary")

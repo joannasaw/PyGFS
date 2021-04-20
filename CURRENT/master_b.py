@@ -188,6 +188,8 @@ class MasterService(rpyc.Service):
 
             num_blocks = self.calc_num_blocks(size)
             blocks = self.alloc_blocks(dest, num_blocks)
+            print("HIIIIIII")
+            print(blocks)
             # master returns block to client
             return blocks
 
