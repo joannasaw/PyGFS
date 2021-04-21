@@ -80,9 +80,9 @@ def get(master, fname):
                     # sys.stdout.write(data)
                     full_data += data
                     print("Found in Secondary")
-                    
+                    break
                 else:
-                    print("Err: Secondaries also not responding")
+                    print("Err: Secondary is also not responding")
 
     return full_data
 

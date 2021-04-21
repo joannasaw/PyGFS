@@ -53,7 +53,7 @@ def get_heartbeat(chunkServerStatus, chunkServer_idx, host, port):
         status = "alive"
     except Exception as e:
         status = "dead"
-        # print("Heartbeat to chunkserver {}: {}, {} failed".format(chunkServer_idx, host, port))
+        print("Heartbeat to chunkserver {}: {}, {} failed".format(chunkServer_idx, host, port))
 
     chunkServerStatus[chunkServer_idx] = status
     # print(chunkServerStatus)
