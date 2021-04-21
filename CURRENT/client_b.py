@@ -55,6 +55,7 @@ def delete_from_chunks(block_uuid, primaryServer, secondaryServers):
 def get(master, fname):
     full_data = ""
     file_table = master.get_file_table_entry(fname)
+    chunkServers = master.get_chunkServers()
     print(file_table)
     if not file_table:
         print("File is not in the list. \n  Check list of files first")
@@ -63,34 +64,32 @@ def get(master, fname):
     for block in file_table:
         if debug_Mode:
             print(block)
-        print(block)
-        for m in [master.get_primaryServers()[_] for _ in block[1]]:
-            print(m)
-            data = read_from_chunkServer(block[0], m)
-            print(data)
-            if data:
-                # sys.stdout.write(data)
-                print("Found in Primary")
-                full_data += data
-                break
+        primary_idx =  block[1]
+        data = read_from_chunkServer(block[0], chunkServers[primary_idx])
+        if data:
+            # sys.stdout.write(data)
+            print("Found in Primary")
+            full_data += data
+            
 
-            else:
-                print("Err: Primary not responding")
-                for n in [master.get_secondaryServers(block[1])[_] for _ in block[2]]:
-                    data = read_from_chunkServer(block[0], n)
-                    if data:
-                        # sys.stdout.write(data)
-                        full_data += data
-                        print("Found in Secondary")
-                        break
-                    else:
-                        print("Err: Secondaries also not responding")
+        else:
+            print("Err: Primary not responding")
+            for secondaryServer in [chunkServers[sec_idx] for sec_idx in block[2]]:
+                data = read_from_chunkServer(block[0], secondaryServer)
+                if data:
+                    # sys.stdout.write(data)
+                    full_data += data
+                    print("Found in Secondary")
+                    
+                else:
+                    print("Err: Secondaries also not responding")
 
     return full_data
 
 
 def delete(master, fname):
     file_table = master.get_file_table_entry(fname)
+    chunkServers = master.get_chunkServers()
     if not file_table:
         print("File is not in the list. \n  Check list of files first")
         return False
@@ -98,12 +97,12 @@ def delete(master, fname):
 
     for block in file_table:
         # seems to have unnecessary overparsing to get primary ID '2' from e.g. block = ('8a1fdfdc-9fee-11eb-b262-00155d7a8699', '2', ['3', '4'], 0)
-        secondaryServers = [master.get_secondaryServers(block[1])[_] for _ in block[2]]
-        for m in [master.get_primaryServers()[_] for _ in block[1]]:
-            condition = delete_from_chunks(block[0], m, secondaryServers)
-            if not condition:
-                print("Error: File not found in chunk servers")
-                return False
+        secondaryServers = [chunkServers[sec_idx] for sec_idx in block[2]]
+        primaryServer = chunkServers[block[1]]
+        condition = delete_from_chunks(block[0], primaryServer, secondaryServers)
+        if not condition:
+            print("Error: File not found in chunk servers")
+            return False
 
     file_table = master.delete(fname)
     print("File deleted from chunk servers")
