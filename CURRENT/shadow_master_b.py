@@ -81,6 +81,9 @@ class PrimaryBackUpService(rpyc.Service):
             for secondary_id in self.__class__.primary_secondary_table[primary_id]:
                 secondaryServers[secondary_id] = self.__class__.allChunkServers[secondary_id]
             return secondaryServers
+        
+        def exposed_get_chunkServers(self):
+            return self.__class__.allChunkServers
 
 
 if __name__ == "__main__":
