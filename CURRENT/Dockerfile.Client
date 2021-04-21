@@ -1,0 +1,14 @@
+FROM python:3.7
+
+RUN pip install rpyc
+
+WORKDIR app
+
+COPY letters.txt .
+COPY numbers.txt .
+COPY client_b.py .
+COPY gui.py .
+
+ENV DISPLAY :0
+
+CMD python client_b.py    
