@@ -12,11 +12,7 @@ from threading import Timer
 import copy
 
 # This function basically stores the state of the master and its mapping to a local file when interrupted
-
 # when signal is received for keyboard cancel, this function runs to save
-# TODO: create a backup server to integrate with this
-
-
 def int_handler(signal, frame):
     file_table = MasterService.exposed_Master.file_table
     allChunkServers = MasterService.exposed_Master.allChunkServers
@@ -201,7 +197,7 @@ class MasterService(rpyc.Service):
 
         def exposed_get_chunkServers(self):
             return self.__class__.allChunkServers
-        
+
         def find_primary_with_least(self):
             primary_secondary_table = self.__class__.primary_secondary_table
             output = ""
@@ -245,13 +241,13 @@ class MasterService(rpyc.Service):
                     if chunk[1] == chunkserver_id:
                         blocks_filled += 1
             return blocks_filled
-            
+
         def get_most_available_primary(self):
             primaryServers = self.exposed_get_primaryServers()
             blocks_filled_dict = {}
             for primary in primaryServers:
                 blocks_filled_dict[primary] = self.num_filled_blocks(primary)
-            
+
             v = list(blocks_filled_dict.values())
             k = list(blocks_filled_dict.keys())
 

@@ -70,7 +70,7 @@ def get(master, fname):
             # sys.stdout.write(data)
             print("Found in Primary")
             full_data += data
-            
+
 
         else:
             print("Err: Primary not responding")
@@ -124,7 +124,7 @@ def write_b(master, b, data):
 def put(master, source, dest):  # will overwrite existing file with same name/dest
     size = os.path.getsize(source)  # returns the size of file in integer
     # print(size)
-    # gets the blocks of from  TODO: this adds file name to file table, if machine fails to upload, file name still exists but does not reference to any blocks i.e. will still be seen in list
+    # gets the blocks of from
     blocks = master.write(dest, size)
     with open(source) as f:
         # loop through each of the blocks given by master and write to it
@@ -216,7 +216,6 @@ def main(args):
                     original_file_name = input("SOURCE FILE NAME: ")
                     dest = input("DFS FILE NAME: ")
                     # client.write(file_name, content)
-                    # TODO: currently uploads an existing file, what about creating a new file?
                     put(master, original_file_name, dest)
 
                 # write here is a function to create a new file + upload
@@ -289,53 +288,6 @@ def main(args):
                         shadow_master = connect_to_shadow()
                         if shadow_master is not None:
                             list_files(shadow_master)
-    # while master is None:
-    #     try:
-            # print("Unable to connect to Master, only READ and LIST operations allowed")
-            # request = input(
-            #     "\nTYPE 'list' or 'read': (l/r) ")
-            # if request == "read" or request == "r":
-            #     file_name = input("DFS FILE NAME: ")
-            #     print("\nAttempting to read from shadow master")
-            #     shadow_master = connect_to_shadow()
-            #     if shadow_master is not None:
-            #         data = get(shadow_master, file_name)
-            #         print(data)
-            # elif request == "list" or request == "l":
-            #     print("\nAttempting to list from shadow master")
-            #     shadow_master = connect_to_shadow()
-            #     if shadow_master is not None:
-            #         list_files(shadow_master)
-    #     except Exception as e:
-    #         print(e)
-    #         print("Unable to use shadow master")
-
-
-
-
-    # if len(args) == 0:
-    #     print "------ Help on Usage -------"
-    #     print "To upload : Client.py put Destination/to/the/src/file  Name_of_the_file_in_the_GFS "
-    #     print "To download: Client.py get Name_of_the_file_in_the_GFS"
-    #     print "To delete: Client.py delete Name_of_the_file_in_the_GFS"
-    #     print "To overwite: Client.py put Destination/to/the/src/file Name_of_the_file_in_the_GFS"
-    #     return
-
-    # if args[0] == "get":
-    #     get(master, args[1])
-    # elif args[0] == "put":
-    #     put(master, args[1], args[2])
-    # elif args[0] == "delete":
-    #     delete(master, args[1])
-    # elif args[0] == "list":
-    #     list_files(master)
-    # else:
-    #   print "Incorrect command \n"
-    #   print "------ Help on Usage -------"
-    #   print "To upload : Client.py put Destination/to/the/src/file  Name_of_the_file_in_the_GFS "
-    #   print "To download: Client.py get Name_of_the_file_in_the_GFS"
-    #   print "To delete: Client.py delete Name_of_the_file_in_the_GFS"
-    #   print "To overwite: Client.py put Destination/to/the/src/file Name_of_the_file_in_the_GFS"
 
 
 if __name__ == "__main__":
