@@ -24,8 +24,7 @@ INSTRUCTIONS:
 2. Run master.py in another terminal
 3. Run chunkserver.py in 6 other terminals
 - When requested, input port values: 8888, 8887, 8886, 8885, 8884, 8883
-4. Run client.py in 2 other terminals
+4. EITHER run client.py in 2 other terminals
 - Input commands: 'list', 'upload', 'create', 'read', 'append' or 'delete (l/u/c/r/a/d)
-OR
-  Run gui.py in 2 other terminals
+4. OR run gui.py in 2 other terminals
 - Use tkinter interface to execute above functions
