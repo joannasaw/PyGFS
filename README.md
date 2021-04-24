@@ -1,15 +1,15 @@
 # PyGFS
 This README.md documents the files and work for 50.041 Distributed Systems project taken in Spring 2021.
 ```
-├── CURRENT
-|   ├── client_b.py
-|   ├── master_b.py
-|   ├── chunkserver_b.py
+├── MAIN
+|   ├── chunkserver.py
+|   ├── client.py
+|   ├── gui.py
+|   ├── master.py
+|   ├── shadow_master.py
 │   ├── letters.txt
 │   ├── numbers.txt
 │   └── GFS.conf
-|
-├── Hybrid
 |
 ├── gfs_root (will be ignored)
 │  
@@ -20,8 +20,12 @@ This README.md documents the files and work for 50.041 Distributed Systems proje
 * Note that the gfs_root folder will be ignored, and will be created locally upon running
 
 INSTRUCTIONS:
-1. Run master_b.py in a terminal
-2. Run chunkserver_b.py in 4 other terminals
-- When requested, input DIFFERENT port values (e.g. 8888, 7777, 6666, 5555)
-3. Run client_b.py in 2 other terminals
-- Input commands: 'list', 'upload', 'write', 'read', 'append' or 'delete (l/w/r/a/d)
+1. Run shadow_master.pu in a terminal
+2. Run master.py in another terminal
+3. Run chunkserver.py in 6 other terminals
+- When requested, input port values: 8888, 8887, 8886, 8885, 8884, 8883
+4. Run client.py in 2 other terminals
+- Input commands: 'list', 'upload', 'create', 'read', 'append' or 'delete (l/u/c/r/a/d)
+OR
+  Run gui.py in 2 other terminals
+- Use tkinter interface to execute above functions
