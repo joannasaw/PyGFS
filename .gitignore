@@ -3,4 +3,5 @@ gfs_root/
 CURRENT/Dockerfile.Chunks
 CURRENT/Dockerfile.Client
 CURRENT/Dockerfile.mster
+CURRENT/Dockerfile.shwmaster
 CURRENT/backup_json

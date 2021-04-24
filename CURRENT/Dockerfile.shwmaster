@@ -1,0 +1,11 @@
+FROM python:3.7
+
+RUN pip install rpyc
+RUN pip install configparser
+
+WORKDIR app
+
+COPY GFS.conf .
+COPY shadow_master_b.py .
+
+CMD python shadow_master_b.py
